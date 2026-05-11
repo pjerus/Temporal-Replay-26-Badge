@@ -316,6 +316,22 @@
       "baked": false
     },
     {
+      "path": "/apps/scanner/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "fnv1a32": "0x811C9DC5",
+      "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/__init__.py",
+      "baked": false
+    },
+    {
+      "path": "/apps/scanner/main.py",
+      "size": 3586,
+      "sha256": "641fd9a0917a8d56b085801448054606575ffab638aa06be733d41cb6bd5d5dd",
+      "fnv1a32": "0x0DE0F702",
+      "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/main.py",
+      "baked": false
+    },
+    {
       "path": "/apps/synth/main.py",
       "size": 15000,
       "sha256": "2cd0dbc4113253704cc01113a466c9cc53c0bf381b66dde1962283250c4e6da9",
@@ -701,9 +717,9 @@
     },
     {
       "path": "/manifest.json",
-      "size": 33088,
-      "sha256": "fd3d48290e0267a5737ace4a17f5efa5fe2f094fe616d95d67c50e58408e681d",
-      "fnv1a32": "0xFD55E913",
+      "size": 33803,
+      "sha256": "5a3446b04de80ef632a6587674c523c0b2bfbecf55d05814c4714299e6bd053a",
+      "fnv1a32": "0xCD3EFAD1",
       "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/manifest.json",
       "baked": false
     },
