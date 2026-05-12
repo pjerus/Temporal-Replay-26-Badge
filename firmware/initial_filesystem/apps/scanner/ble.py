@@ -11,6 +11,7 @@ Controls:
 
 import time
 
+from badge import *
 from badge_app import read_stick_4way, GCTicker
 
 ROW_H = 9

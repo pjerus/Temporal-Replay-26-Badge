@@ -7,6 +7,7 @@ brightness, IMU face-down dims output, BACK exits cleanly.
 
 import time
 
+from badge import *
 from badge_app import read_stick_4way, GCTicker
 
 BRIGHTNESS_LEVELS = (80, 160, 40)
