@@ -229,17 +229,6 @@ static bool assetLibraryVisible() {
 // apps discovered by AppRegistry are appended after this list when the
 // menu is rebuilt.
 static const GridMenuItem kCuratedMenuItems[] = {
-    {"BOOP",     "Exchange contact info over IR",
-     AppIcons::booper,    kScreenBoop,     nullptr, nullptr, nullptr},
-    {"CONTACTS", "Browse people you've booped",
-     AppIcons::profile,   kScreenContacts, nullptr, nullptr, nullptr},
-    {"BADGE INFO", "Edit your name, title, company, and contact info",
-     AppIcons::profile,   kScreenBadgeInfo, nullptr, nullptr, nullptr},
-    {"MAP",      "Find your way around the venue",
-     AppIcons::map,       kScreenMap,      nullptr, nullptr, nullptr},
-    {"SCHEDULE", "See conference sessions, workshops, and what's next",
-     AppIcons::schedule, kScreenSchedule, nullptr, nullptr, nullptr},
-
     {"DRAW", "Draw frames and animations with stickers and pixels",
      DrawIcons::menuDraw, kScreenDrawPicker, nullptr, nullptr, nullptr},
 
@@ -286,10 +275,6 @@ static const GridMenuItem kCuratedMenuItems[] = {
      AppIcons::settings,  kScreenSettings, nullptr, nullptr, nullptr},
      {"HELP", "Tips, button shortcuts, and links to the developer docs",
       AppIcons::docs,      kScreenHelp,         nullptr, nullptr, nullptr},
-     {"SPONSORS", "Thank you to our sponsors!",
-      AppIcons::about,     kScreenAboutSponsors, nullptr, nullptr, nullptr},
-     {"CREDITS", "Meet the crew that built this badge",
-      AppIcons::profile,   kScreenNone,          launchCredits, nullptr, nullptr},
       {"DIAGNOSTICS", "Inspect runtime state, tasks, battery, and memory",
         AppIcons::about,     kScreenDiagnostics, nullptr, nullptr, nullptr},
 };
