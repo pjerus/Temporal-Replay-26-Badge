@@ -388,6 +388,36 @@ uint32_t temporalbadge_hal_ir_ms_since_rx(void) {
     return temporalbadge_runtime_ir_ms_since_rx();
 }
 
+// BLE scan
+
+int temporalbadge_hal_ble_scan_start(void) {
+    return temporalbadge_runtime_ble_scan_start();
+}
+
+void temporalbadge_hal_ble_scan_stop(void) {
+    temporalbadge_runtime_ble_scan_stop();
+}
+
+int temporalbadge_hal_ble_scan_count(void) {
+    return temporalbadge_runtime_ble_scan_count();
+}
+
+int temporalbadge_hal_ble_scan_prune(uint32_t stale_ms) {
+    return temporalbadge_runtime_ble_scan_prune(stale_ms);
+}
+
+int temporalbadge_hal_ble_scan_get(int idx,
+                                    uint8_t addr_out[6],
+                                    int *addr_type_out,
+                                    int *rssi_out,
+                                    uint32_t *age_ms_out,
+                                    char *name_out,
+                                    size_t name_buf_len) {
+    return temporalbadge_runtime_ble_scan_get(idx, addr_out, addr_type_out,
+                                               rssi_out, age_ms_out,
+                                               name_out, name_buf_len);
+}
+
 // Badge identity / boops
 
 const char *temporalbadge_hal_my_uuid(void) {

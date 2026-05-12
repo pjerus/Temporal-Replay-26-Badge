@@ -155,6 +155,19 @@ int temporalbadge_runtime_ir_raw_send(const uint16_t *pairs,
 uint32_t temporalbadge_runtime_ir_ms_since_tx(void);
 uint32_t temporalbadge_runtime_ir_ms_since_rx(void);
 
+// BLE scan (general device discovery)
+int  temporalbadge_runtime_ble_scan_start(void);
+void temporalbadge_runtime_ble_scan_stop(void);
+int  temporalbadge_runtime_ble_scan_count(void);
+int  temporalbadge_runtime_ble_scan_prune(uint32_t stale_ms);
+int  temporalbadge_runtime_ble_scan_get(int idx,
+                                         uint8_t addr_out[6],
+                                         int *addr_type_out,
+                                         int *rssi_out,
+                                         uint32_t *age_ms_out,
+                                         char *name_out,
+                                         size_t name_buf_len);
+
 // Badge identity / boops
 const char *temporalbadge_runtime_my_uuid(void);
 const char *temporalbadge_runtime_boops(void);

@@ -681,6 +681,56 @@ static mp_obj_t temporalbadge_ir_read(void) {
 static MP_DEFINE_CONST_FUN_OBJ_0(temporalbadge_ir_read_obj,
                                   temporalbadge_ir_read);
 
+// ── BLE scan ────────────────────────────────────────────────────────────────
+
+static mp_obj_t temporalbadge_ble_scan_start(void) {
+    return mp_obj_new_int(temporalbadge_hal_ble_scan_start());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(temporalbadge_ble_scan_start_obj,
+                                  temporalbadge_ble_scan_start);
+
+static mp_obj_t temporalbadge_ble_scan_stop(void) {
+    temporalbadge_hal_ble_scan_stop();
+    return mp_const_none;
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(temporalbadge_ble_scan_stop_obj,
+                                  temporalbadge_ble_scan_stop);
+
+static mp_obj_t temporalbadge_ble_scan_count(void) {
+    return mp_obj_new_int(temporalbadge_hal_ble_scan_count());
+}
+static MP_DEFINE_CONST_FUN_OBJ_0(temporalbadge_ble_scan_count_obj,
+                                  temporalbadge_ble_scan_count);
+
+static mp_obj_t temporalbadge_ble_scan_prune(mp_obj_t stale_ms_obj) {
+    uint32_t stale_ms = (uint32_t)mp_obj_get_int(stale_ms_obj);
+    return mp_obj_new_int(temporalbadge_hal_ble_scan_prune(stale_ms));
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(temporalbadge_ble_scan_prune_obj,
+                                  temporalbadge_ble_scan_prune);
+
+// Returns (addr_bytes, addr_type, rssi, age_ms, name_str) or None.
+static mp_obj_t temporalbadge_ble_scan_get(mp_obj_t idx_obj) {
+    int idx = mp_obj_get_int(idx_obj);
+    uint8_t addr[6] = {0};
+    int addr_type = 0;
+    int rssi = 0;
+    uint32_t age_ms = 0;
+    char name[32] = {0};
+    int rc = temporalbadge_hal_ble_scan_get(idx, addr, &addr_type, &rssi,
+                                             &age_ms, name, sizeof(name));
+    if (rc != 0) return mp_const_none;
+    mp_obj_t items[5];
+    items[0] = mp_obj_new_bytes(addr, 6);
+    items[1] = mp_obj_new_int(addr_type);
+    items[2] = mp_obj_new_int(rssi);
+    items[3] = mp_obj_new_int((mp_int_t)age_ms);
+    items[4] = mp_obj_new_str(name, strlen(name));
+    return mp_obj_new_tuple(5, items);
+}
+static MP_DEFINE_CONST_FUN_OBJ_1(temporalbadge_ble_scan_get_obj,
+                                  temporalbadge_ble_scan_get);
+
 // ── Mouse overlay ───────────────────────────────────────────────────────────
 
 static mp_obj_t temporalbadge_mouse_overlay(mp_obj_t enable_obj) {
@@ -1593,6 +1643,13 @@ static const mp_rom_map_elem_t temporalbadge_globals_table[] = {
     { MP_ROM_QSTR(MP_QSTR_ir_raw_capture), MP_ROM_PTR(&temporalbadge_ir_raw_capture_obj) },
     { MP_ROM_QSTR(MP_QSTR_ir_raw_send),    MP_ROM_PTR(&temporalbadge_ir_raw_send_obj) },
     { MP_ROM_QSTR(MP_QSTR_ir_activity),    MP_ROM_PTR(&temporalbadge_ir_activity_obj) },
+
+    // BLE scan
+    { MP_ROM_QSTR(MP_QSTR_ble_scan_start), MP_ROM_PTR(&temporalbadge_ble_scan_start_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ble_scan_stop),  MP_ROM_PTR(&temporalbadge_ble_scan_stop_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ble_scan_count), MP_ROM_PTR(&temporalbadge_ble_scan_count_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ble_scan_prune), MP_ROM_PTR(&temporalbadge_ble_scan_prune_obj) },
+    { MP_ROM_QSTR(MP_QSTR_ble_scan_get),   MP_ROM_PTR(&temporalbadge_ble_scan_get_obj) },
 
     // Badge identity / boops
     { MP_ROM_QSTR(MP_QSTR_my_uuid), MP_ROM_PTR(&temporalbadge_my_uuid_obj) },
