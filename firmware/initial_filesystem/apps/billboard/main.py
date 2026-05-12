@@ -4,7 +4,7 @@ Reads the display name from /apps/billboard/name.txt (first non-empty line,
 stripped). Falls back to "BADGE" if the file is missing or empty.
 
 Effects on entry → mode picker. CONFIRM cycles to next effect mid-run;
-BACK exits to the apps menu.
+BACK exits the effect (back to picker, then back to apps menu).
 """
 
 __title__ = "Billboard"
@@ -16,7 +16,7 @@ import random
 import time
 
 from badge import *
-from badge_app import GCTicker, read_stick_4way, ticks_add
+from badge_app import read_stick_4way, ticks_add
 
 NAME_PATH = "/apps/billboard/name.txt"
 DEFAULT_NAME = "BADGE"
@@ -24,9 +24,26 @@ DEFAULT_NAME = "BADGE"
 OLED_W = 128
 OLED_H = 64
 
-# Default font on this badge is 6x8 px per char at text_size=1.
-CHAR_W = 6
-CHAR_H = 8
+# Fonts available on the badge, ordered largest → smallest. Each entry:
+# (name, approximate cell width, approximate cell height). Width is used
+# only as a fallback estimate; we always re-measure with oled_text_width()
+# when picking a font for a given string.
+BIG_FONTS = (
+    ("Spleen 32x64", 32, 64),   # 1-2 chars max
+    ("Spleen 16x32", 16, 32),   # ~6-7 chars
+    ("Spleen 12x24", 12, 24),   # ~10 chars
+    ("Spleen 8x16",   8, 16),   # ~14 chars
+    ("10x20",        10, 20),
+    ("Spleen 6x12",   6, 12),
+    ("6x10",          6, 10),
+)
+FALLBACK_FONT = "6x10"
+
+
+# Sentinel return codes from effects.
+EXIT_BACK = "back"
+EXIT_NEXT = "next"
+EXIT_TIMEOUT = "timeout"
 
 
 # ── name loading ─────────────────────────────────────────────────────────────
@@ -43,37 +60,61 @@ def load_name():
     return DEFAULT_NAME
 
 
-def fit_text_size(text):
-    """Pick the largest text_size 1..4 that still fits horizontally."""
-    n = len(text) if text else 1
-    for size in (4, 3, 2, 1):
-        if n * CHAR_W * size <= OLED_W:
-            return size
-    return 1
+def measure(s, font_name):
+    try:
+        oled_set_font(font_name)
+        return oled_text_width(s)
+    except Exception:
+        return len(s) * 6  # rough fallback
 
 
-def centered_xy(text, size):
-    w = len(text) * CHAR_W * size
-    h = CHAR_H * size
+def pick_biggest_font(name):
+    """Largest BIG_FONTS entry that fits the OLED width."""
+    for font_name, _w, _h in BIG_FONTS:
+        try:
+            oled_set_font(font_name)
+            if oled_text_width(name) <= OLED_W:
+                return font_name
+        except Exception:
+            continue
+    return FALLBACK_FONT
+
+
+def big_centered(name, font_name=None):
+    """Render `name` in the largest font that fits, centered on the OLED."""
+    font_name = font_name or pick_biggest_font(name)
+    try:
+        oled_set_font(font_name)
+        w = oled_text_width(name)
+        h = oled_text_height(name)
+    except Exception:
+        w = len(name) * 6
+        h = 8
     x = max(0, (OLED_W - w) // 2)
     y = max(0, (OLED_H - h) // 2)
-    return x, y
-
-
-def big_centered(text):
-    """Render text as large as it'll fit, centered."""
-    size = fit_text_size(text)
-    x, y = centered_xy(text, size)
-    try:
-        oled_set_text_size(size)
-    except Exception:
-        pass
     oled_set_cursor(x, y)
-    oled_print(text)
-    try:
-        oled_set_text_size(1)
-    except Exception:
-        pass
+    oled_print(name)
+
+
+# ── input helpers ────────────────────────────────────────────────────────────
+
+def check_exit():
+    """Single check that returns EXIT_BACK / EXIT_NEXT / None.
+    Caller decides what to do."""
+    if button_pressed(BTN_BACK):
+        return EXIT_BACK
+    if button_pressed(BTN_CONFIRM):
+        return EXIT_NEXT
+    return None
+
+
+def check_or_timeout(deadline_ms):
+    rc = check_exit()
+    if rc:
+        return rc
+    if deadline_ms is not None and time.ticks_diff(deadline_ms, time.ticks_ms()) <= 0:
+        return EXIT_TIMEOUT
+    return None
 
 
 # ── matrix helpers ───────────────────────────────────────────────────────────
@@ -89,7 +130,6 @@ def matrix_clear():
 
 
 def matrix_column_sweep(col, lo=20, hi=255):
-    """Light one column hi, others lo."""
     for x in range(8):
         b = hi if x == col else lo
         for y in range(8):
@@ -97,8 +137,6 @@ def matrix_column_sweep(col, lo=20, hi=255):
 
 
 def matrix_border(phase, dim=15, bright=255):
-    """Light the perimeter cells, with one cell at `phase` glowing brightest.
-    phase is an integer that walks the border (28 cells around an 8x8)."""
     perim = []
     for x in range(8):
         perim.append((x, 0))
@@ -121,34 +159,37 @@ def matrix_border(phase, dim=15, bright=255):
 
 # ── effects ──────────────────────────────────────────────────────────────────
 
-def effect_scroll(name, deadline_ticks):
-    """Name slides right→left across the OLED. Matrix sweeps in sync."""
-    size = 3 if len(name) <= 6 else 2
-    text_w = len(name) * CHAR_W * size
-    text_h = CHAR_H * size
-    y = (OLED_H - text_h) // 2
+def effect_scroll(name, deadline_ms):
+    """Name slides right→left across the OLED in the biggest font that fits
+    vertically (Spleen 16x32 is usually right). Matrix sweeps in sync."""
+    # For scroll, prefer Spleen 16x32 — taller, dramatic, fits any name length
+    # since we scroll past the right edge anyway.
+    font_name = "Spleen 16x32"
+    try:
+        oled_set_font(font_name)
+        text_w = oled_text_width(name)
+        text_h = oled_text_height(name)
+    except Exception:
+        text_w = len(name) * 16
+        text_h = 32
+    y = max(0, (OLED_H - text_h) // 2)
+
     x = OLED_W
-    SPEED = 2  # px per frame
+    SPEED = 3
     last_col = -1
     while True:
-        if button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM):
-            return
-        if deadline_ticks is not None and time.ticks_diff(deadline_ticks, time.ticks_ms()) <= 0:
-            return
+        rc = check_or_timeout(deadline_ms)
+        if rc:
+            return rc
         oled_clear()
         try:
-            oled_set_text_size(size)
+            oled_set_font(font_name)
         except Exception:
             pass
         oled_set_cursor(x, y)
         oled_print(name)
-        try:
-            oled_set_text_size(1)
-        except Exception:
-            pass
         oled_show()
 
-        # Matrix column sweep tracks scroll progress.
         col = 7 - (((-x) // 4) % 8)
         if col != last_col:
             matrix_column_sweep(col)
@@ -160,29 +201,25 @@ def effect_scroll(name, deadline_ticks):
         time.sleep_ms(40)
 
 
-def effect_strobe(name, deadline_ticks):
+def effect_strobe(name, deadline_ms):
     """Hard inversion every other frame, both displays."""
     inv = False
     last_redraw = 0
     last_invert = 0
+    font_name = pick_biggest_font(name)
     while True:
         now = time.ticks_ms()
-        if button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM):
+        rc = check_or_timeout(deadline_ms)
+        if rc:
             try:
                 oled_invert(False)
             except Exception:
                 pass
-            return
-        if deadline_ticks is not None and time.ticks_diff(deadline_ticks, now) <= 0:
-            try:
-                oled_invert(False)
-            except Exception:
-                pass
-            return
+            return rc
 
         if time.ticks_diff(now, last_redraw) > 200:
             oled_clear()
-            big_centered(name)
+            big_centered(name, font_name)
             oled_show()
             last_redraw = now
 
@@ -198,8 +235,8 @@ def effect_strobe(name, deadline_ticks):
         time.sleep_ms(20)
 
 
-def effect_pulse(name, deadline_ticks):
-    """Slow breathing brightness on matrix; OLED static + occasional invert."""
+def effect_pulse(name, deadline_ms):
+    """Static OLED with the name; matrix breathes; OLED inverts at peaks."""
     oled_clear()
     big_centered(name)
     oled_show()
@@ -207,25 +244,17 @@ def effect_pulse(name, deadline_ticks):
     t = 0
     last_invert_state = False
     while True:
-        now = time.ticks_ms()
-        if button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM):
+        rc = check_or_timeout(deadline_ms)
+        if rc:
             try:
                 oled_invert(False)
             except Exception:
                 pass
-            return
-        if deadline_ticks is not None and time.ticks_diff(deadline_ticks, now) <= 0:
-            try:
-                oled_invert(False)
-            except Exception:
-                pass
-            return
+            return rc
 
-        # Sine pulse 0..255.
         b = int(128 + 127 * math.sin(t * 0.18))
         matrix_fill(b)
 
-        # OLED inverts at peaks.
         invert_now = b > 240
         if invert_now != last_invert_state:
             try:
@@ -238,7 +267,7 @@ def effect_pulse(name, deadline_ticks):
         time.sleep_ms(50)
 
 
-def effect_marquee(name, deadline_ticks):
+def effect_marquee(name, deadline_ms):
     """Static centered name + chase-light border on matrix."""
     oled_clear()
     big_centered(name)
@@ -246,16 +275,15 @@ def effect_marquee(name, deadline_ticks):
 
     phase = 0
     while True:
-        if button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM):
-            return
-        if deadline_ticks is not None and time.ticks_diff(deadline_ticks, time.ticks_ms()) <= 0:
-            return
+        rc = check_or_timeout(deadline_ms)
+        if rc:
+            return rc
         matrix_border(phase)
         phase += 1
         time.sleep_ms(80)
 
 
-def effect_sparkle(name, deadline_ticks):
+def effect_sparkle(name, deadline_ms):
     """Static name + random sparkle dots on the matrix."""
     oled_clear()
     big_centered(name)
@@ -264,18 +292,14 @@ def effect_sparkle(name, deadline_ticks):
     buf = [0] * 64
     DECAY = 30
     while True:
-        if button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM):
-            return
-        if deadline_ticks is not None and time.ticks_diff(deadline_ticks, time.ticks_ms()) <= 0:
-            return
-        # Decay all cells.
+        rc = check_or_timeout(deadline_ms)
+        if rc:
+            return rc
         for i in range(64):
             v = buf[i] - DECAY
             buf[i] = v if v > 0 else 0
-        # Spark a few new cells.
         for _ in range(3):
-            i = random.randint(0, 63)
-            buf[i] = 255
+            buf[random.randint(0, 63)] = 255
         for y in range(8):
             for x in range(8):
                 led_set_pixel(x, y, buf[y * 8 + x])
@@ -290,23 +314,28 @@ EFFECTS = (
     ("Pulse",    effect_pulse),
     ("Marquee",  effect_marquee),
     ("Sparkle",  effect_sparkle),
-    ("Cycle",    None),  # special: rotates through all effects
 )
-CYCLE_INDEX = len(EFFECTS) - 1
+CYCLE_LABEL = "Cycle"
 CYCLE_INTERVAL_MS = 5000
 
 
 def pick_effect():
+    """Show picker. Returns effect index or 'cycle' or None (BACK)."""
+    entries = [label for label, _ in EFFECTS] + [CYCLE_LABEL]
     selected = 0
     last_move = 0
     settle_start = time.ticks_ms()
 
     def _draw():
         oled_clear()
+        try:
+            oled_set_font(FALLBACK_FONT)
+        except Exception:
+            pass
         led_clear()
         oled_set_cursor(0, 0)
         oled_print("Pick effect:")
-        for i, (label, _) in enumerate(EFFECTS):
+        for i, label in enumerate(entries):
             y = 12 + i * 9
             prefix = "> " if i == selected else "  "
             oled_set_cursor(0, y)
@@ -324,7 +353,7 @@ def pick_effect():
         if button_pressed(BTN_BACK):
             return None
         if button_pressed(BTN_CONFIRM):
-            return selected
+            return "cycle" if selected == len(EFFECTS) else selected
         if time.ticks_diff(now, last_move) >= 180:
             _, dy = read_stick_4way()
             if button_pressed(BTN_UP):
@@ -332,31 +361,33 @@ def pick_effect():
             elif button_pressed(BTN_DOWN):
                 dy = 1
             if dy != 0:
-                selected = (selected + dy) % len(EFFECTS)
+                selected = (selected + dy) % len(entries)
                 last_move = now
                 _draw()
         time.sleep_ms(40)
 
 
-def run_effect(name, idx):
-    """Run a single effect indefinitely (until BACK or CONFIRM)."""
-    label, fn = EFFECTS[idx]
-    fn(name, None)
+def run_single(name, idx):
+    """Run a single effect. CONFIRM advances to next effect; BACK returns to picker."""
+    while True:
+        rc = EFFECTS[idx][1](name, None)
+        if rc == EXIT_BACK:
+            return
+        # EXIT_NEXT: advance to next effect, brief debounce so the same
+        # CONFIRM doesn't immediately re-trigger inside the new effect.
+        idx = (idx + 1) % len(EFFECTS)
+        time.sleep_ms(220)
 
 
 def run_cycle(name):
-    """Auto-rotate through every effect every CYCLE_INTERVAL_MS."""
+    """Auto-rotate every CYCLE_INTERVAL_MS until BACK or CONFIRM."""
     i = 0
     while True:
-        label, fn = EFFECTS[i]
-        if fn is None:
-            i = (i + 1) % len(EFFECTS)
-            continue
         deadline = ticks_add(time.ticks_ms(), CYCLE_INTERVAL_MS)
-        fn(name, deadline)
-        # If user pressed BACK, the effect returns; check globally.
-        if button_pressed(BTN_BACK):
+        rc = EFFECTS[i][1](name, deadline)
+        if rc == EXIT_BACK or rc == EXIT_NEXT:
             return
+        # rc == EXIT_TIMEOUT: advance.
         i = (i + 1) % len(EFFECTS)
 
 
@@ -366,38 +397,30 @@ def main():
 
     try:
         while True:
-            idx = pick_effect()
-            if idx is None:
+            choice = pick_effect()
+            if choice is None:
                 break
             try:
-                if idx == CYCLE_INDEX:
+                if choice == "cycle":
                     run_cycle(name)
                 else:
-                    # CONFIRM during single-mode advances to next effect; loop here
-                    # so you can mash CONFIRM to walk the list without going back to
-                    # the picker every time.
-                    while True:
-                        EFFECTS[idx][1](name, None)
-                        # Returning from an effect means BACK or CONFIRM was pressed.
-                        # If BACK: bail to picker. If CONFIRM: advance.
-                        if button_pressed(BTN_BACK):
-                            break
-                        idx = (idx + 1) % len(EFFECTS)
-                        if idx == CYCLE_INDEX:
-                            idx = 0
-                        # Brief debounce so the CONFIRM that advanced doesn't
-                        # also instantly trigger inside the next effect.
-                        time.sleep_ms(180)
+                    run_single(name, choice)
             finally:
                 try:
                     oled_invert(False)
                 except Exception:
                     pass
                 led_clear()
+            # After returning from run_*, the caller already consumed BACK.
+            # Loop back to picker.
     finally:
         led_clear()
         try:
             led_override_end()
+        except Exception:
+            pass
+        try:
+            oled_set_font(FALLBACK_FONT)
         except Exception:
             pass
         oled_clear(True)
