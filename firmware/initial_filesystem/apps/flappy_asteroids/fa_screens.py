@@ -178,6 +178,56 @@ def title(best):
     return wait_choice(True, False)
 
 
+_MODE_ENTRIES = (
+    ("Both",      "both"),
+    ("Asteroids", "asteroids"),
+    ("Flappy",    "flappy"),
+)
+
+
+def pick_mode():
+    """Show a 3-option mode picker. Returns "both" / "asteroids" / "flappy",
+    or None if the user pressed BACK."""
+    selected = 0
+
+    def _draw():
+        oled_clear()
+        led_clear()
+        ui.chrome(
+            "Pick Mode",
+            "",
+            "OK",
+            "play",
+            "BACK",
+            "cancel",
+        )
+        for i, (label, _) in enumerate(_MODE_ENTRIES):
+            y = 14 + i * 11
+            prefix = "> " if i == selected else "  "
+            ui.text(4, y, prefix + label, 120)
+        oled_show()
+
+    _draw()
+    last_move = 0
+    while True:
+        now = time.ticks_ms()
+        if button_pressed(BTN_BACK):
+            return None
+        if button_pressed(BTN_CONFIRM):
+            return _MODE_ENTRIES[selected][1]
+        if time.ticks_diff(now, last_move) >= 180:
+            dy = 0
+            if button_pressed(BTN_UP):
+                dy = -1
+            elif button_pressed(BTN_DOWN):
+                dy = 1
+            if dy != 0:
+                selected = (selected + dy) % len(_MODE_ENTRIES)
+                last_move = now
+                _draw()
+        time.sleep_ms(40)
+
+
 def draw_end_reason(reason):
     label = {
         "Bird Crash": "Your Bird Crashed",

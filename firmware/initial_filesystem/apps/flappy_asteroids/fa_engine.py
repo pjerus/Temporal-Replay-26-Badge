@@ -43,6 +43,7 @@ from fa_data import (
     flappy_has_benefit,
     grant_asteroids_benefit,
     grant_flappy_benefit,
+    live_score,
     load_best,
     make_rock,
     new_game,
@@ -52,7 +53,7 @@ from fa_data import (
     show_toast,
     ticks_add,
 )
-from fa_screens import draw_asteroids, draw_flappy, game_over, title
+from fa_screens import draw_asteroids, draw_flappy, game_over, pick_mode, title
 
 
 def read_stick():
@@ -321,7 +322,71 @@ def tick_flappy(game, flap_pressed, now):
     return check_pipe_collision(game, now)
 
 
-def play_loop(game, session):
+def _flappy_oled_status(game, now):
+    """Minimal OLED readout for flappy-only mode (the game itself is on the matrix)."""
+    oled_clear()
+    oled_set_cursor(0, 0)
+    oled_print("Flappy")
+    oled_set_cursor(0, 14)
+    oled_print("Pipes: " + str(game["pipes_passed"]))
+    oled_set_cursor(0, 26)
+    oled_print("Score: " + str(live_score(game, now)))
+    oled_set_cursor(0, 54)
+    oled_print("OK=flap  BACK=quit")
+    oled_show()
+
+
+def play_asteroids(game, session):
+    """Asteroids-only loop. LED matrix stays dark; ship-vs-rock collision is the only end condition."""
+    fire_latch = ButtonLatch(BTN_CONFIRM)
+    led_clear()
+
+    while True:
+        now = session.now()
+        x_dir, thrust = read_stick()
+        fire_latch.poll()
+
+        if session.frame_due(game, now):
+            if not tick_asteroids(game, x_dir, thrust, fire_latch.consume(), now):
+                return game, now
+            draw_asteroids(game, now)
+
+        if session.quit_held(BACK_QUIT_MS):
+            game["reason"] = "Quit"
+            return game, now
+
+        session.sleep()
+
+
+def play_flappy(game, session):
+    """Flappy-only loop. Game runs on the LED matrix; OLED shows a small status."""
+    fire_latch = ButtonLatch(BTN_CONFIRM)
+    draw_flappy(game, time.ticks_ms())
+    _flappy_oled_status(game, time.ticks_ms())
+    last_status = time.ticks_ms()
+
+    while True:
+        now = session.now()
+        flap_pressed = fire_latch.poll()
+
+        if not tick_flappy(game, flap_pressed, now):
+            return game, now
+        draw_flappy(game, now)
+
+        # Re-render the OLED status occasionally so live score updates.
+        if time.ticks_diff(now, last_status) >= 250:
+            _flappy_oled_status(game, now)
+            last_status = now
+
+        if session.quit_held(BACK_QUIT_MS):
+            game["reason"] = "Quit"
+            return game, now
+
+        session.sleep()
+
+
+def play_both(game, session):
+    """Original dual-screen loop: asteroids on OLED + flappy on matrix; either crash ends."""
     fire_latch = ButtonLatch(BTN_CONFIRM)
     draw_flappy(game, time.ticks_ms())
 
@@ -346,10 +411,18 @@ def play_loop(game, session):
         session.sleep()
 
 
-def play_once():
+_LOOP_FOR_MODE = {
+    "both":      play_both,
+    "asteroids": play_asteroids,
+    "flappy":    play_flappy,
+}
+
+
+def play_once(mode):
     game = new_game()
     session = DualScreenSession(FRAME_MS)
-    return with_led_override(play_loop, game, session)
+    loop = _LOOP_FOR_MODE[mode]
+    return with_led_override(loop, game, session)
 
 
 def main():
@@ -361,7 +434,12 @@ def main():
         exit()
 
     while True:
-        game, end_ms = play_once()
+        mode = with_led_override(pick_mode)
+        if mode is None:
+            oled_clear(True)
+            exit()
+
+        game, end_ms = play_once(mode)
         score = score_for(game, end_ms)
         new_best = score["total"] > best["total"]
         if new_best:
