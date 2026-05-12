@@ -4,7 +4,7 @@ import time
 
 from badge import *
 
-from badge_app import wait_choice
+from badge_app import read_stick_4way, wait_choice
 import badge_ui as ui
 from fa_data import (
     BIRD_X,
@@ -208,15 +208,23 @@ def pick_mode():
         oled_show()
 
     _draw()
+    # Settle: ignore inputs briefly so a held CONFIRM/BACK from the prior
+    # screen doesn't auto-pick the default before the user sees the menu.
+    settle_start = time.ticks_ms()
     last_move = 0
     while True:
         now = time.ticks_ms()
+        if time.ticks_diff(now, settle_start) < 250:
+            time.sleep_ms(20)
+            continue
+
         if button_pressed(BTN_BACK):
             return None
         if button_pressed(BTN_CONFIRM):
             return _MODE_ENTRIES[selected][1]
+
         if time.ticks_diff(now, last_move) >= 180:
-            dy = 0
+            _, dy = read_stick_4way()
             if button_pressed(BTN_UP):
                 dy = -1
             elif button_pressed(BTN_DOWN):
