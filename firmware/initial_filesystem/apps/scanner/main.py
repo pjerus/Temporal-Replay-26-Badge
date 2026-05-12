@@ -8,7 +8,15 @@ __title__ = "Scanner"
 __description__ = "Multi-band scanner (Phase 2)"
 __order__ = 0
 
+import sys
 import time
+
+# The badge runs apps with the global sys.path (no per-app entry by default),
+# so sibling-module imports like `import ble` / `import demo` need the app
+# directory on sys.path explicitly. flappy_asteroids/main.py uses the same idiom.
+APP_DIR = "/apps/scanner"
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
 
 from badge_app import read_stick_4way
 
