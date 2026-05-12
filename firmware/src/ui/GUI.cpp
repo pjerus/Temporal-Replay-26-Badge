@@ -257,8 +257,10 @@ static const GridMenuItem kCuratedMenuItems[] = {
     {"TARDIGOTCHI", "Hatch and care for a tiny tardigrade",
      AppIcons::tardigotchi, kScreenNone, launchTardigotchi, nullptr, nullptr},
 
+#ifdef BADGE_HAS_DOOM
     {"DOOM",        "Play DOOM on the badge",
      AppIcons::doom,      kScreenDoom,        nullptr, nullptr, nullptr},
+#endif
 
     {"APPS",        "Run MicroPython apps stored on the badge",
      AppIcons::apps,      kScreenApps,        nullptr, nullptr, nullptr},
