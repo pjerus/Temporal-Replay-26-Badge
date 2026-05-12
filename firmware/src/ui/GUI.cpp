@@ -229,22 +229,10 @@ static bool assetLibraryVisible() {
 // apps discovered by AppRegistry are appended after this list when the
 // menu is rebuilt.
 static const GridMenuItem kCuratedMenuItems[] = {
-    {"DRAW", "Draw frames and animations with stickers and pixels",
-     DrawIcons::menuDraw, kScreenDrawPicker, nullptr, nullptr, nullptr},
-
     {"IR BLOCK", "Clear lines and send garbage over IR",
      AppIcons::irBlockBattle, kScreenNone, launchIRBlockBattle, nullptr, nullptr},
     {"IR PLAY", "Universal remote, sniffer, TV-B-Gone, and IR mini-games",
      AppIcons::irPlayground, kScreenNone, launchIRPlayground, nullptr, nullptr},
-    {"BREAKSNAKE",  "Play Breakout and Snake together",
-     AppIcons::breaksnake, kScreenNone,       launchBreakSnake, nullptr, nullptr},
-    {"FLAPPY", "Play Asteroids and Flappy Bird together",
-     AppIcons::flappyAsteroids, kScreenNone,  launchFlappyAsteroids, nullptr, nullptr},
-
-    {"SYNTH", "Play joystick tones, loops, and loadable sounds",
-     AppIcons::synth,     kScreenNone,       launchSynth, nullptr, nullptr},
-    {"TARDIGOTCHI", "Hatch and care for a tiny tardigrade",
-     AppIcons::tardigotchi, kScreenNone, launchTardigotchi, nullptr, nullptr},
 
 #ifdef BADGE_HAS_DOOM
     {"DOOM",        "Play DOOM on the badge",
