@@ -1,135 +1,102 @@
-"""
-/apps/scanner/main.py — Phase 1 hardware demo.
+"""/apps/scanner/main.py — launcher menu.
 
-Exercises every I/O channel:
-  Joystick      → moves cursor on 8x8 LED matrix
-  UP/DOWN/LEFT/RIGHT buttons → also move cursor
-  CONFIRM       → cycle color (brightness level)
-  IMU tilt/face → shown on OLED; face-down dims LEDs
-  BACK          → clean exit
-
-Cursor is a single lit pixel on the 8x8 IS31FL3731 matrix.
-OLED shows live joystick XY, cursor pos, IMU tilt, and face state.
+Phase 2: pick a sub-screen (BLE Scan or Demo). BACK from a sub-screen
+returns here; BACK from the menu exits the app.
 """
 
 __title__ = "Scanner"
-__description__ = "Phase 1 hardware demo"
+__description__ = "Multi-band scanner (Phase 2)"
 __order__ = 0
 
 import time
-import gc
 
-from badge_app import read_stick_4way, GCTicker
+from badge_app import read_stick_4way
 
-# --- demo state ---
-cursor_x = 3
-cursor_y = 3
-bright_index = 0
+ENTRIES = (
+    ("BLE Scan", "ble"),
+    ("Demo",     "demo"),
+)
 
-BRIGHTNESS_LEVELS = (80, 160, 40)
-BRIGHTNESS_LABELS = ("med", "hi", "lo")
+MOVE_COOLDOWN_MS = 180
 
-LOOP_MS = 80          # main loop interval ~12 fps
-JOY_COOLDOWN_MS = 120 # min ms between joystick-driven moves
 
-last_joy_move = 0
-
-def clamp(v, lo, hi):
-    return lo if v < lo else (hi if v > hi else v)
-
-def render_oled(cx, cy, brt_label, jx, jy, tilt_x, tilt_y, face_down, imu_ok):
+def _draw(selected):
     oled_clear()
-    # header
-    ui_header("Scanner", "Phase 1")
-
-    # cursor position
-    oled_set_cursor(0, 14)
-    oled_print("Cur:" + str(cx) + "," + str(cy) + "  Brt:" + brt_label)
-
-    # joystick raw
-    oled_set_cursor(0, 26)
-    oled_print("Joy:" + str(jx) + "/" + str(jy))
-
-    # IMU
-    if imu_ok:
-        oled_set_cursor(0, 38)
-        oled_print("Tilt " + str(int(tilt_x)) + "/" + str(int(tilt_y)))
-        oled_set_cursor(0, 50)
-        oled_print("Face:" + ("down" if face_down else "up  "))
-    else:
-        oled_set_cursor(0, 38)
-        oled_print("IMU: not ready")
-
+    ui_header("Scanner", "")
+    for i, (label, _) in enumerate(ENTRIES):
+        y = 16 + i * 12
+        prefix = "> " if i == selected else "  "
+        oled_set_cursor(0, y)
+        oled_print(prefix + label)
+    oled_set_cursor(0, 54)
+    oled_print("CONFIRM=open BACK=exit")
     oled_show()
 
-def render_matrix(cx, cy, brightness):
-    led_clear()
-    led_set_pixel(cx, cy, brightness)
 
-def cleanup():
-    led_clear()
-    matrix_app_stop()
-    led_override_end()
+def _launch(name):
+    if name == "ble":
+        import ble
+        ble.run()
+    elif name == "demo":
+        import demo
+        demo.run()
+
+
+def _show_error(label, err):
+    oled_clear()
+    ui_header("Scanner", "Error")
+    oled_set_cursor(0, 18)
+    oled_print(label + " failed:")
+    msg = str(err)
+    oled_set_cursor(0, 30)
+    oled_print(msg[:21])
+    if len(msg) > 21:
+        oled_set_cursor(0, 42)
+        oled_print(msg[21:42])
+    oled_set_cursor(0, 54)
+    oled_print("Any button to dismiss")
+    oled_show()
+    time.sleep_ms(400)
+    while not (button_pressed(BTN_BACK) or button_pressed(BTN_CONFIRM)
+               or button_pressed(BTN_UP) or button_pressed(BTN_DOWN)):
+        time.sleep_ms(50)
+
+
+def main():
+    selected = 0
+    last_move = 0
+    _draw(selected)
+
+    while True:
+        now = time.ticks_ms()
+
+        if button_pressed(BTN_BACK):
+            break
+
+        if button_pressed(BTN_CONFIRM):
+            haptic_pulse(60, 20)
+            try:
+                _launch(ENTRIES[selected][1])
+            except Exception as e:
+                _show_error(ENTRIES[selected][0], e)
+            _draw(selected)
+            continue
+
+        if time.ticks_diff(now, last_move) >= MOVE_COOLDOWN_MS:
+            _, dy = read_stick_4way()
+            if button_pressed(BTN_UP):
+                dy = -1
+            elif button_pressed(BTN_DOWN):
+                dy = 1
+            if dy != 0:
+                selected = (selected + dy) % len(ENTRIES)
+                last_move = now
+                _draw(selected)
+
+        time.sleep_ms(40)
+
     oled_clear(True)
 
-# --- entry point ---
-imu_ok = imu_ready()
 
-led_override_begin()
-led_clear()
-led_brightness(80)
-
-gc_ticker = GCTicker()
-
-while True:
-    now = time.ticks_ms()
-
-    # --- exit ---
-    if button_pressed(BTN_BACK):
-        break
-
-    # --- brightness cycle on CONFIRM ---
-    if button_pressed(BTN_CONFIRM):
-        bright_index = (bright_index + 1) % len(BRIGHTNESS_LEVELS)
-        haptic_pulse(80, 20)
-
-    brightness = BRIGHTNESS_LEVELS[bright_index]
-    brt_label  = BRIGHTNESS_LABELS[bright_index]
-
-    # --- face-down dims matrix ---
-    face_down = imu_face_down() if imu_ok else False
-    active_brightness = brightness // 4 if face_down else brightness
-
-    # --- joystick move (with cooldown) ---
-    if time.ticks_diff(now, last_joy_move) >= JOY_COOLDOWN_MS:
-        jx_dir, jy_dir = read_stick_4way()
-        if jx_dir != 0 or jy_dir != 0:
-            cursor_x = clamp(cursor_x + jx_dir, 0, 7)
-            cursor_y = clamp(cursor_y + jy_dir, 0, 7)
-            last_joy_move = now
-
-    # --- button moves (edge-triggered, no cooldown needed) ---
-    if button_pressed(BTN_UP):
-        cursor_y = clamp(cursor_y - 1, 0, 7)
-    if button_pressed(BTN_DOWN):
-        cursor_y = clamp(cursor_y + 1, 0, 7)
-    if button_pressed(BTN_LEFT):
-        cursor_x = clamp(cursor_x - 1, 0, 7)
-    if button_pressed(BTN_RIGHT):
-        cursor_x = clamp(cursor_x + 1, 0, 7)
-
-    # --- read sensors for display ---
-    jx = joy_x()
-    jy = joy_y()
-    tilt_x = imu_tilt_x() if imu_ok else 0
-    tilt_y = imu_tilt_y() if imu_ok else 0
-
-    # --- render ---
-    render_matrix(cursor_x, cursor_y, active_brightness)
-    render_oled(cursor_x, cursor_y, brt_label, jx, jy, tilt_x, tilt_y, face_down, imu_ok)
-
-    gc_ticker.tick()
-    time.sleep_ms(LOOP_MS)
-
-cleanup()
+main()
 exit()
