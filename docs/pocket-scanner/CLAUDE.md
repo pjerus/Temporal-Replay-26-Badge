@@ -103,8 +103,13 @@ pin table is from the older Firmware-0306 sketch and does not match the Echo boa
   | I²S amp, MAX98357A (Adafruit 3006) | real audio, three GPIOs | $5.95 | Adafruit |
   | Mini metal speaker 8 Ω 0.5 W (Adafruit 1890) | pairs with the amp | $1.95 | Adafruit (out of stock when checked); Micro Center $2.99 |
   | SparkFun Qwiic Buzzer (BOB-24474) | beeps over I²C, needs a Qwiic port | $10.50 | SparkFun |
+  | Generic INMP441 I²S mic module | microphone, shares clock pins with the amp | $2.99 to $4.95 | EasyElecModule $2.99, ElectroPeak $3.87, Vetco $4.95 (Tayda $1.59, out of stock); quality varies |
+  | Adafruit I²S MEMS mic, SPH0645LM4H (Adafruit 3421) | microphone | $6.95 to $9.15 | Micro Center $6.95, Jameco $9.15 |
+  | Adafruit I²S MEMS mic, ICS-43434 (Adafruit 6049) | microphone | $8.95 | Adafruit |
 
-  Rough totals: buzzer about $1 to $2; amp plus speaker about $8 to $9.
+  Rough totals: buzzer about $1 to $2; amp plus speaker about $8 to $9; adding a mic
+  brings speaker plus mic to about $11 to $18. A mic and amp can share the two clock
+  pins, so about four free pins cover both.
 
 - **Tailscale.** No official ESP32 client. Community project MicroLink
   (https://github.com/CamM2325/microlink) implements the Tailscale protocol on

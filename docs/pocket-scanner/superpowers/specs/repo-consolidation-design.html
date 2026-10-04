@@ -156,7 +156,7 @@
   <tr><td>Pin table in <code>CLAUDE.md</code></td><td>Was copied from upstream&rsquo;s older docs and was wrong for Echo. Corrected from <code>EchoDefines.h</code>.</td><td><span class="tag good">fixed</span></td></tr>
 </table>
 
-<h3>Speaker parts and prices</h3>
+<h3>Speaker and microphone parts, with prices</h3>
 <p>US list prices as of 2026-10-04, taken from retailer search results. Before shipping and tax; not re-checked on each product page.</p>
 <table>
   <tr><th>Part</th><th>Use</th><th>Price</th><th>Where</th></tr>
@@ -164,8 +164,11 @@
   <tr><td>I&sup2;S amp, MAX98357A (Adafruit 3006)</td><td>Real audio, three GPIOs</td><td>$5.95</td><td>Adafruit</td></tr>
   <tr><td>Mini metal speaker 8 &Omega; 0.5 W (Adafruit 1890)</td><td>Pairs with the amp</td><td>$1.95</td><td>Adafruit (out of stock when checked); Micro Center $2.99</td></tr>
   <tr><td>SparkFun Qwiic Buzzer (BOB-24474)</td><td>Beeps over I&sup2;C, needs a Qwiic port</td><td>$10.50</td><td>SparkFun</td></tr>
+  <tr><td>Generic INMP441 I&sup2;S mic module</td><td>Microphone, shares clock pins with the amp</td><td>$2.99 to $4.95</td><td>EasyElecModule $2.99, ElectroPeak $3.87, Vetco $4.95 (Tayda $1.59, out of stock); quality varies</td></tr>
+  <tr><td>Adafruit I&sup2;S MEMS mic, SPH0645LM4H (Adafruit 3421)</td><td>Microphone</td><td>$6.95 to $9.15</td><td>Micro Center $6.95, Jameco $9.15</td></tr>
+  <tr><td>Adafruit I&sup2;S MEMS mic, ICS-43434 (Adafruit 6049)</td><td>Microphone</td><td>$8.95</td><td>Adafruit</td></tr>
 </table>
-<p class="meta">Rough totals: buzzer about $1 to $2; amp plus speaker about $8 to $9.</p>
+<p class="meta">Rough totals: buzzer about $1 to $2; amp plus speaker about $8 to $9. Adding a mic brings speaker plus mic to about $11 to $18. A mic and amp can share the two clock pins, so about four free pins cover both.</p>
 
 <h2>6. In plain terms</h2>
 <p>Before, the badge code lived in one GitHub repo and the notes about it in another. The notes now sit next to the code and the notes-only repo is gone.</p>
