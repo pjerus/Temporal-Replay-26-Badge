@@ -93,6 +93,19 @@ pin table is from the older Firmware-0306 sketch and does not match the Echo boa
 - **Speaker.** Options: piezo buzzer on one free GPIO (simplest); I²S amp such as
   MAX98357A with a small speaker (three free pins plus new audio code); a Qwiic
   buzzer if Echo has the connector.
+
+  Speaker part prices, US list prices as of 2026-10-04 (from retailer search results,
+  before shipping and tax; not re-checked on each product page):
+
+  | Part | Use | Price | Where |
+  |------|-----|-------|-------|
+  | Piezo buzzer PS1240 (Adafruit 160) | beeps on one GPIO | $0.95 to $1.99 | Pi Shop $0.95, Tinkersphere $1.49, Jameco $1.99 |
+  | I²S amp, MAX98357A (Adafruit 3006) | real audio, three GPIOs | $5.95 | Adafruit |
+  | Mini metal speaker 8 Ω 0.5 W (Adafruit 1890) | pairs with the amp | $1.95 | Adafruit (out of stock when checked); Micro Center $2.99 |
+  | SparkFun Qwiic Buzzer (BOB-24474) | beeps over I²C, needs a Qwiic port | $10.50 | SparkFun |
+
+  Rough totals: buzzer about $1 to $2; amp plus speaker about $8 to $9.
+
 - **Tailscale.** No official ESP32 client. Community project MicroLink
   (https://github.com/CamM2325/microlink) implements the Tailscale protocol on
   ESP32-S3 (~100 KB RAM, PSRAM recommended, ESP-IDF 5.0+). This firmware is Arduino
