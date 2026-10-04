@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pocket Scanner: overview and repo consolidation</title>
+<style>
+  :root {
+    --bg: #fafaf7; --fg: #1c1c1a; --muted: #5f5f5a; --card: #ffffff; --line: #d9d9d2;
+    --accent: #1b6ec2; --good: #1d7a46; --warn: #a15c00; --bad: #b3261e;
+    --code-bg: #f0f0ea;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151514; --fg: #ecece6; --muted: #a2a29a; --card: #1e1e1c; --line: #3a3a36;
+      --accent: #6fb1f0; --good: #5cc98a; --warn: #e2a34a; --bad: #f0827a; --code-bg: #262624;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 var(--font); }
+  main { max-width: 860px; margin: 0 auto; padding: 32px 20px 80px; }
+  h1 { font-size: 1.8rem; margin: 0 0 4px; }
+  h2 { font-size: 1.25rem; margin: 40px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1rem; margin: 22px 0 6px; }
+  .meta { color: var(--muted); font-size: .9rem; }
+  .lead { font-size: 1.1rem; margin: 16px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; background: var(--card); font-size: .93rem; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--code-bg); }
+  code, pre { font-family: var(--mono); font-size: .86rem; background: var(--code-bg); border-radius: 4px; }
+  code { padding: 1px 5px; }
+  pre { padding: 12px; overflow-x: auto; border: 1px solid var(--line); }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: .78rem; border: 1px solid currentColor; }
+  .good { color: var(--good); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  .note { background: var(--card); border-left: 4px solid var(--accent); padding: 10px 14px; margin: 14px 0; }
+  .note.warn { border-left-color: var(--warn); color: var(--fg); }
+  svg { max-width: 100%; height: auto; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+  svg text { fill: var(--fg); font-family: var(--font); font-size: 13px; }
+  svg .sub { fill: var(--muted); font-size: 11.5px; }
+  svg .box { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  svg .keep { stroke: var(--good); stroke-width: 2; }
+  svg .gone { stroke: var(--bad); stroke-width: 2; stroke-dasharray: 5 4; }
+  svg .ext { stroke: var(--muted); stroke-width: 1.5; }
+  svg .arrow { stroke: var(--accent); stroke-width: 2; fill: none; }
+  svg marker path { fill: var(--accent); }
+  ol li, ul li { margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Pocket Scanner: overview and repo consolidation</h1>
+<p class="meta">Started 2026-10-04 &middot; Revision 1 (2026-10-04) &middot; Status: proposal, nothing changed yet</p>
+
+<p class="lead">Pocket Scanner is custom firmware for a Temporal Replay 26 conference badge, turning it into a handheld Bluetooth scanner. Today the work sits in two GitHub repos, and one of them (<code>temporal-badge-scanner</code>) only holds docs. This page describes the project, then proposes folding the docs into <code>pjerus/Temporal-Replay-26-Badge</code> and deleting the docs-only repo.</p>
+
+<h2>1. What the project is</h2>
+
+<p>The badge is an ESP32-S3 handheld with a small OLED screen, an 8&times;8 LED matrix, a joystick, four buttons, a motion sensor, infrared send/receive, WiFi and Bluetooth LE. It has no speaker; the only &ldquo;sound&rdquo; is the vibration motor buzzing. Apps are small MicroPython programs stored on the badge&rsquo;s file system; the core is C++ (Arduino framework, built with PlatformIO).</p>
+
+<table>
+  <tr><th>Phase</th><th>Scope</th><th>State</th></tr>
+  <tr><td>1</td><td>Strip DOOM, conference menus and games; add a hardware-exercise demo (joystick, buttons, motion, OLED, LEDs)</td><td><span class="tag good">done</span></td></tr>
+  <tr><td>2</td><td>Bluetooth scan: C++ scanner exposed to MicroPython as <code>badge.ble_scan_*</code>; live device list sorted by signal strength</td><td><span class="tag good">working</span></td></tr>
+  <tr><td>2 (extras)</td><td><code>leddemos</code> (fire, plasma, matrix rain) and <code>billboard</code> (scrolling name tag)</td><td><span class="tag good">shipped</span></td></tr>
+  <tr><td>3?</td><td>WiFi and IR scanning</td><td><span class="tag warn">not started</span></td></tr>
+</table>
+
+<h3>Known loose ends</h3>
+<ul>
+  <li>Five Bluetooth names were hand-patched into a generated file, with a workaround in <code>qstr.c</code>. The proper fix is re-running <code>setup_arduino_embed.sh</code>.</li>
+  <li>The factory-restore path in <code>CLAUDE.md</code> says <code>~/backups/...</code>; the file is really at <code>pi-arduino/backups/firmware-v0.2.4/</code>.</li>
+  <li>The registry entry in <code>~/ai-dev/index.html</code> says GitHub <code>none</code> and describes Phase 2 as covering BLE, WiFi and IR. Both are out of date.</li>
+</ul>
+
+<h2>2. The repos today</h2>
+
+<svg viewBox="0 0 820 300" role="img" aria-label="Today: upstream repo, personal fork with firmware branches, and a separate docs repo">
+  <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
+  <rect class="box ext" x="20" y="30" width="220" height="90" rx="8"/>
+  <text x="34" y="58" font-weight="600">Architeuthis-Flux/</text>
+  <text x="34" y="76" font-weight="600">Temporal-Replay-26-Badge</text>
+  <text class="sub" x="34" y="98">upstream firmware, read-only for us</text>
+
+  <rect class="box keep" x="300" y="30" width="250" height="150" rx="8"/>
+  <text x="314" y="58" font-weight="600">pjerus/Temporal-Replay-26-Badge</text>
+  <text class="sub" x="314" y="78">public fork (our firmware)</text>
+  <text class="sub" x="314" y="102">branch pocket-scanner-phase1</text>
+  <text class="sub" x="314" y="120">branch pocket-scanner-phase2</text>
+  <text class="sub" x="314" y="144">no docs, specs or plans here</text>
+
+  <rect class="box gone" x="590" y="30" width="210" height="150" rx="8"/>
+  <text x="604" y="58" font-weight="600">pjerus/</text>
+  <text x="604" y="76" font-weight="600">temporal-badge-scanner</text>
+  <text class="sub" x="604" y="100">public, docs only</text>
+  <text class="sub" x="604" y="118">README, CLAUDE.md,</text>
+  <text class="sub" x="604" y="134">specs, plans, checkpoints</text>
+  <text class="sub" x="604" y="156">gitignores upstream/</text>
+
+  <path class="arrow" d="M240,75 L296,75" marker-end="url(#a1)"/>
+  <text class="sub" x="244" y="68">fork</text>
+  <text class="sub" x="300" y="230">Local layout: temporal-badge-scanner/ (outer repo) contains upstream/ (inner repo, 2 remotes).</text>
+  <text class="sub" x="300" y="250">The outer repo never tracks the firmware, so the two repos only meet on this Mac.</text>
+</svg>
+
+<h2>3. Proposal: one repo</h2>
+
+<p>Keep <code>pjerus/Temporal-Replay-26-Badge</code> as the single home. Move the docs into it under <code>docs/pocket-scanner/</code>, then delete <code>temporal-badge-scanner</code>.</p>
+
+<svg viewBox="0 0 820 230" role="img" aria-label="After: one fork repo holding firmware branches and docs">
+  <rect class="box keep" x="170" y="25" width="480" height="150" rx="8"/>
+  <text x="190" y="55" font-weight="600">pjerus/Temporal-Replay-26-Badge</text>
+  <text class="sub" x="190" y="78">branch pocket-scanner-phase1 (kept as is)</text>
+  <text class="sub" x="190" y="98">branch pocket-scanner-phase2 (now the working branch)</text>
+  <text class="sub" x="190" y="124">docs/pocket-scanner/  README, CLAUDE.md, specs/, plans/, checkpoints/</text>
+  <text class="sub" x="190" y="144">restore image: GitHub release asset (16 MB), not a committed file</text>
+</svg>
+
+<h3>Decisions</h3>
+<table>
+  <tr><th>#</th><th>Question</th><th>Proposed answer</th><th>Status</th></tr>
+  <tr><td>D1</td><td>Where do the docs live?</td><td><code>docs/pocket-scanner/</code> on <code>pocket-scanner-phase2</code>. Upstream&rsquo;s own <code>docs/</code> and <code>CLAUDE.md</code> stay untouched, so merges from upstream stay clean.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><td>D2</td><td>Fate of the old repo</td><td>Delete <code>pjerus/temporal-badge-scanner</code> after the move is pushed and checked.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><td>D3</td><td>Other stale repos</td><td>None found. The only other badge-related repo is the fork itself. Say which others you mean.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><td>D4</td><td>History of the docs repo</td><td>Copy files with a fresh commit; don&rsquo;t graft the old history. The old history was already rewritten once, and the files are small.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><td>D5</td><td>Factory restore image</td><td>Keep the local copy in <code>pi-arduino/backups/</code>. Optionally upload it as a release asset on the fork. Don&rsquo;t commit a 16 MB binary.</td><td><span class="tag warn">open</span></td></tr>
+</table>
+
+<h3>Steps (nothing run yet)</h3>
+<ol>
+  <li>In <code>upstream/</code>, on <code>pocket-scanner-phase2</code>, copy in the docs under <code>docs/pocket-scanner/</code> and fix the paths inside them (<code>upstream/firmware/...</code> becomes <code>firmware/...</code>).</li>
+  <li>Commit and push to the <code>backup</code> remote (the fork). Check the files appear on GitHub.</li>
+  <li>Check what links to the old repo: the <code>pjerus.github.io</code> project cards and the <code>~/ai-dev/index.html</code> registry.</li>
+  <li>Delete <code>pjerus/temporal-badge-scanner</code> on GitHub. <span class="bad">This cannot be undone.</span> It needs your go-ahead at that moment.</li>
+  <li>Local clean-up: make <code>upstream/</code> the project root (or leave the folder layout and drop the outer <code>.git</code>), then update the registry entry.</li>
+</ol>
+
+<div class="note warn">
+  <strong>Check before deleting.</strong> The fork&rsquo;s default branch is <code>main</code>, which is plain upstream. Our work is only on the <code>pocket-scanner-*</code> branches. A visitor to the fork sees upstream&rsquo;s README, not ours. Decide whether to make <code>pocket-scanner-phase2</code> the default branch, or add a pointer in the fork&rsquo;s description.
+</div>
+
+<h2>4. Registry entry (proposed)</h2>
+<pre>{ name: "pi-arduino (Pocket Scanner)", state: "on-hold",
+  github: "pjerus/Temporal-Replay-26-Badge (public fork)",
+  latest: "Phase 2 Bluetooth scan, LED demos and billboard work. Waiting on: WiFi and IR scanning (Phase 3)." }</pre>
+<p class="meta">&ldquo;Waiting on&rdquo; is a guess; confirm it.</p>
+
+<h2>5. In plain terms</h2>
+<p>Right now the badge code lives in one GitHub repo and the notes about it live in another. The plan is to put the notes next to the code, then delete the notes-only repo. Nothing is deleted until the move is checked and you approve.</p>
+
+</main>
+</body>
+</html>
