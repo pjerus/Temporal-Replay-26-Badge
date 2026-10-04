@@ -146,7 +146,17 @@
   latest: "Phase 2 Bluetooth scan, LED demos and billboard work. Waiting on: WiFi and IR scanning (Phase 3)." }</pre>
 <p class="meta">&ldquo;Waiting on&rdquo; is a guess at the next step; correct it if Phase 3 isn&rsquo;t the plan.</p>
 
-<h2>5. In plain terms</h2>
+<h2>5. Hardware follow-ups (2026-10-04)</h2>
+<p>Questions raised after the consolidation. Nothing here is built or tested.</p>
+<table>
+  <tr><th>Idea</th><th>What we know</th><th>Status</th></tr>
+  <tr><td>Add a small speaker</td><td>The Echo board has no audio path; only the motor on GPIO6 buzzes. Options: a piezo buzzer on one free pin, an I&sup2;S amplifier with a small speaker (three pins plus new audio code), or a Qwiic buzzer if the board has the connector.</td><td><span class="tag warn">needs board check</span></td></tr>
+  <tr><td>Free pins</td><td>Pins 0&ndash;14, 17, 18, 21, 38 and 42 are used (<code>EchoDefines.h</code>). The repo has KiCad files for ALPHA, BRAVO and CHARLIE only, so we can&rsquo;t tell which others reach a pad on Echo. <code>badge-form-factor_R2.jpeg</code> is a design sketch, not a photo.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><td>Run Tailscale</td><td>No official ESP32 client. The community <a href="https://github.com/CamM2325/microlink">MicroLink</a> project targets ESP32-S3 (about 100 KB RAM, PSRAM recommended, ESP-IDF 5.0+). This firmware uses the Arduino framework, so integration is real work. Not reviewed or tested.</td><td><span class="tag warn">possible, unvetted</span></td></tr>
+  <tr><td>Pin table in <code>CLAUDE.md</code></td><td>Was copied from upstream&rsquo;s older docs and was wrong for Echo. Corrected from <code>EchoDefines.h</code>.</td><td><span class="tag good">fixed</span></td></tr>
+</table>
+
+<h2>6. In plain terms</h2>
 <p>Before, the badge code lived in one GitHub repo and the notes about it in another. The notes now sit next to the code and the notes-only repo is gone.</p>
 
 </main>

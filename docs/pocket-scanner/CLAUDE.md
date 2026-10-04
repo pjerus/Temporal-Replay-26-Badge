@@ -42,14 +42,17 @@ These docs live in `docs/pocket-scanner/`; paths below are from the repo root.
 
 | Subsystem | Part | Interface | Pins |
 |-----------|------|-----------|------|
-| OLED | 1.3" SSD1309 128×64 monochrome | I²C | SDA=GPIO5, SCL=GPIO6 |
+| OLED | 1.3" SSD1309 128×64 monochrome | I²C | SDA=GPIO4, SCL=GPIO5 |
 | LED matrix | **IS31FL3731** 8×8 monochrome (per-pixel brightness 0-255, **not RGB**) | I²C (shared bus) | same SDA/SCL |
 | IMU | **LIS2DH12** 3-axis accelerometer (tilt + face detect) | I²C (shared bus) | same SDA/SCL |
-| Joystick | 2-axis analog | ADC | JOY_X=GPIO1, JOY_Y=GPIO2 |
-| Buttons | 4 directional | digital | UP=44, DOWN=7, LEFT=8, RIGHT=9 |
-| IR TX/RX | NEC protocol via IRremote | digital | TX=GPIO3, RX=GPIO4 |
-| Tilt header | (legacy pin in upstream pinmap; superseded by LIS2DH12) | digital | GPIO43 |
-| Haptics / audio | Vibration motor with PWM coil-whine "tone" — **only audio source, no speaker** | PWM | gated on `BADGE_HAS_HAPTICS` |
+| Joystick | 2-axis analog | ADC | JOY_X=GPIO13, JOY_Y=GPIO12 |
+| Buttons | 4 directional | digital | UP=7, DOWN=17, LEFT=0, RIGHT=18 |
+| IR TX/RX | NEC protocol via IRremote | digital | TX=GPIO2, RX=GPIO1 |
+| Accel interrupt | LIS2DH12 INT (also SYSOFF on the charger) | digital | GPIO3 |
+| Haptics / audio | Vibration motor with PWM coil-whine "tone" — **only audio source, no speaker** | PWM | GPIO6, gated on `BADGE_HAS_HAPTICS` |
+| Power | Battery ADC divider, charger status, charge enable, sleep | mixed | BATT=8, CHG_GOOD=14, CHG_STAT=21, CE=11, SLEEP=10 |
+| LED matrix control | enable and interrupt/audio pins | digital | ENABLE=9, INTB=38 |
+| OLED reset | | digital | RES=42 |
 
 ### Flash layout
 
@@ -76,6 +79,26 @@ These docs live in `docs/pocket-scanner/`; paths below are from the repo root.
 There's no speaker. "Sound" = the vibration motor's coil whine when driven at
 low PWM duty cycle. It's quiet, narrow-band, and only audible held close to
 your ear in a quiet room. The synth app isn't broken if you can't hear it.
+
+Source of truth for pins: `firmware/src/hardware/EchoDefines.h`. Upstream's `CLAUDE.md`
+pin table is from the older Firmware-0306 sketch and does not match the Echo board.
+
+### Open hardware questions (2026-10-04)
+
+- **Free pins.** Pins 0-14, 17, 18, 21, 38 and 42 are in use. Whether any others are
+  broken out to pads on the Echo board is unknown: `hardware/` has KiCad files for
+  ALPHA, BRAVO and CHARLIE only, no Echo or DELTA. Check the physical board.
+  CHARLIE has a Qwiic connector, microSD slot and test points; Echo may differ.
+  `docs/badge-form-factor_R2.jpeg` is a design sketch, not a photo of the board.
+- **Speaker.** Options: piezo buzzer on one free GPIO (simplest); I²S amp such as
+  MAX98357A with a small speaker (three free pins plus new audio code); a Qwiic
+  buzzer if Echo has the connector.
+- **Tailscale.** No official ESP32 client. Community project MicroLink
+  (https://github.com/CamM2325/microlink) implements the Tailscale protocol on
+  ESP32-S3 (~100 KB RAM, PSRAM recommended, ESP-IDF 5.0+). This firmware is Arduino
+  framework on PlatformIO, so integration is real work, and it has not been
+  reviewed or tested here. Check coexistence with WiFi, BLE scanning and the
+  MicroPython heap first.
 
 ---
 
