@@ -52,9 +52,9 @@
 <main>
 
 <h1>Pocket Scanner: overview and repo consolidation</h1>
-<p class="meta">Started 2026-10-04 &middot; Revision 1 (2026-10-04) &middot; Status: proposal, nothing changed yet</p>
+<p class="meta">Started 2026-10-04 &middot; Revision 2 (2026-10-04) &middot; Status: done. Decisions settled, consolidation complete</p>
 
-<p class="lead">Pocket Scanner is custom firmware for a Temporal Replay 26 conference badge, turning it into a handheld Bluetooth scanner. Today the work sits in two GitHub repos, and one of them (<code>temporal-badge-scanner</code>) only holds docs. This page describes the project, then proposes folding the docs into <code>pjerus/Temporal-Replay-26-Badge</code> and deleting the docs-only repo.</p>
+<p class="lead">Pocket Scanner is custom firmware for a Temporal Replay 26 conference badge, turning it into a handheld Bluetooth scanner. Today the work sits in two GitHub repos, and one of them (<code>temporal-badge-scanner</code>) only holds docs. This page describes the project and records the consolidation: the docs were folded into <code>pjerus/Temporal-Replay-26-Badge</code> and the docs-only repo was deleted.</p>
 
 <h2>1. What the project is</h2>
 
@@ -72,12 +72,12 @@
 <ul>
   <li>Five Bluetooth names were hand-patched into a generated file, with a workaround in <code>qstr.c</code>. The proper fix is re-running <code>setup_arduino_embed.sh</code>.</li>
   <li>The factory-restore path in <code>CLAUDE.md</code> says <code>~/backups/...</code>; the file is really at <code>pi-arduino/backups/firmware-v0.2.4/</code>.</li>
-  <li>The registry entry in <code>~/ai-dev/index.html</code> says GitHub <code>none</code> and describes Phase 2 as covering BLE, WiFi and IR. Both are out of date.</li>
+  <li><span class="tag good">fixed</span> The registry entry in <code>~/ai-dev/index.html</code> said GitHub <code>none</code> and described Phase 2 as covering BLE, WiFi and IR. It was updated on 2026-10-04.</li>
 </ul>
 
-<h2>2. The repos today</h2>
+<h2>2. The repos before</h2>
 
-<svg viewBox="0 0 820 300" role="img" aria-label="Today: upstream repo, personal fork with firmware branches, and a separate docs repo">
+<svg viewBox="0 0 820 300" role="img" aria-label="Before: upstream repo, personal fork with firmware branches, and a separate docs repo">
   <defs><marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z"/></marker></defs>
   <rect class="box ext" x="20" y="30" width="220" height="90" rx="8"/>
   <text x="34" y="58" font-weight="600">Architeuthis-Flux/</text>
@@ -105,50 +105,49 @@
   <text class="sub" x="300" y="250">The outer repo never tracks the firmware, so the two repos only meet on this Mac.</text>
 </svg>
 
-<h2>3. Proposal: one repo</h2>
+<h2>3. Result: one repo</h2>
 
-<p>Keep <code>pjerus/Temporal-Replay-26-Badge</code> as the single home. Move the docs into it under <code>docs/pocket-scanner/</code>, then delete <code>temporal-badge-scanner</code>.</p>
+<p><code>pjerus/Temporal-Replay-26-Badge</code> is the single home. The docs now live under <code>docs/pocket-scanner/</code> and <code>temporal-badge-scanner</code> is deleted.</p>
 
 <svg viewBox="0 0 820 230" role="img" aria-label="After: one fork repo holding firmware branches and docs">
   <rect class="box keep" x="170" y="25" width="480" height="150" rx="8"/>
   <text x="190" y="55" font-weight="600">pjerus/Temporal-Replay-26-Badge</text>
   <text class="sub" x="190" y="78">branch pocket-scanner-phase1 (kept as is)</text>
-  <text class="sub" x="190" y="98">branch pocket-scanner-phase2 (now the working branch)</text>
+  <text class="sub" x="190" y="98">branch pocket-scanner-phase2 (default branch)</text>
   <text class="sub" x="190" y="124">docs/pocket-scanner/  README, CLAUDE.md, specs/, plans/, checkpoints/</text>
-  <text class="sub" x="190" y="144">restore image: GitHub release asset (16 MB), not a committed file</text>
+  <text class="sub" x="190" y="144">restore image: local only (<code>pi-arduino/backups/</code>), not committed</text>
 </svg>
 
 <h3>Decisions</h3>
 <table>
-  <tr><th>#</th><th>Question</th><th>Proposed answer</th><th>Status</th></tr>
-  <tr><td>D1</td><td>Where do the docs live?</td><td><code>docs/pocket-scanner/</code> on <code>pocket-scanner-phase2</code>. Upstream&rsquo;s own <code>docs/</code> and <code>CLAUDE.md</code> stay untouched, so merges from upstream stay clean.</td><td><span class="tag warn">open</span></td></tr>
-  <tr><td>D2</td><td>Fate of the old repo</td><td>Delete <code>pjerus/temporal-badge-scanner</code> after the move is pushed and checked.</td><td><span class="tag warn">open</span></td></tr>
-  <tr><td>D3</td><td>Other stale repos</td><td>None found. The only other badge-related repo is the fork itself. Say which others you mean.</td><td><span class="tag warn">open</span></td></tr>
-  <tr><td>D4</td><td>History of the docs repo</td><td>Copy files with a fresh commit; don&rsquo;t graft the old history. The old history was already rewritten once, and the files are small.</td><td><span class="tag warn">open</span></td></tr>
-  <tr><td>D5</td><td>Factory restore image</td><td>Keep the local copy in <code>pi-arduino/backups/</code>. Optionally upload it as a release asset on the fork. Don&rsquo;t commit a 16 MB binary.</td><td><span class="tag warn">open</span></td></tr>
+  <tr><th>#</th><th>Question</th><th>Decision</th><th>Status</th></tr>
+  <tr><td>D1</td><td>Where do the docs live?</td><td><code>docs/pocket-scanner/</code> on <code>pocket-scanner-phase2</code>. Upstream&rsquo;s own <code>docs/</code> and <code>CLAUDE.md</code> are untouched, so merges from upstream stay clean.</td><td><span class="tag good">settled</span></td></tr>
+  <tr><td>D2</td><td>Fate of the old repo</td><td>Deleted <code>pjerus/temporal-badge-scanner</code> after the move was pushed and checked.</td><td><span class="tag good">done</span></td></tr>
+  <tr><td>D3</td><td>Other stale repos</td><td>None. The only other badge-related repo is the fork itself.</td><td><span class="tag good">settled</span></td></tr>
+  <tr><td>D4</td><td>History of the docs repo</td><td>Files copied as one fresh commit (<code>a32524b</code>); old history not carried over.</td><td><span class="tag good">settled</span></td></tr>
+  <tr><td>D5</td><td>Factory restore image</td><td>Stays local in <code>pi-arduino/backups/</code>. Not committed and not uploaded as a release asset.</td><td><span class="tag good">settled</span></td></tr>
+  <tr><td>D6</td><td>Fork default branch</td><td>Changed from upstream&rsquo;s <code>main</code> to <code>pocket-scanner-phase2</code>, so visitors see our README.</td><td><span class="tag good">done</span></td></tr>
 </table>
 
-<h3>Steps (nothing run yet)</h3>
+<h3>Steps taken</h3>
 <ol>
-  <li>In <code>upstream/</code>, on <code>pocket-scanner-phase2</code>, copy in the docs under <code>docs/pocket-scanner/</code> and fix the paths inside them (<code>upstream/firmware/...</code> becomes <code>firmware/...</code>).</li>
-  <li>Commit and push to the <code>backup</code> remote (the fork). Check the files appear on GitHub.</li>
-  <li>Check what links to the old repo: the <code>pjerus.github.io</code> project cards and the <code>~/ai-dev/index.html</code> registry.</li>
-  <li>Delete <code>pjerus/temporal-badge-scanner</code> on GitHub. <span class="bad">This cannot be undone.</span> It needs your go-ahead at that moment.</li>
-  <li>Local clean-up: make <code>upstream/</code> the project root (or leave the folder layout and drop the outer <code>.git</code>), then update the registry entry.</li>
+  <li><span class="tag good">done</span> Copied the docs into <code>docs/pocket-scanner/</code> on <code>pocket-scanner-phase2</code>, fixed paths inside <code>README.md</code> and <code>CLAUDE.md</code> (older specs, plans and checkpoints still say <code>upstream/firmware/...</code>; read that as <code>firmware/...</code>), and rewrote the &ldquo;two repos&rdquo; intro.</li>
+  <li><span class="tag good">done</span> Committed and pushed to the fork; confirmed the files appear on GitHub.</li>
+  <li><span class="tag good">done</span> Checked links: neither <code>pjerus.github.io</code> nor the registry mentioned the old repo.</li>
+  <li><span class="tag good">done</span> Deleted <code>pjerus/temporal-badge-scanner</code> on GitHub (needed the <code>delete_repo</code> permission on <code>gh</code>).</li>
+  <li><span class="tag good">done</span> Set <code>pocket-scanner-phase2</code> as the fork&rsquo;s default branch.</li>
+  <li><span class="tag good">done</span> Local clean-up: removed the outer <code>.git</code>, the duplicate docs and the old <code>.gitignore</code>. <code>temporal-badge-scanner/</code> now holds only <code>upstream/</code>; open sessions from there.</li>
+  <li><span class="tag good">done</span> Updated the registry entry.</li>
 </ol>
 
-<div class="note warn">
-  <strong>Check before deleting.</strong> The fork&rsquo;s default branch is <code>main</code>, which is plain upstream. Our work is only on the <code>pocket-scanner-*</code> branches. A visitor to the fork sees upstream&rsquo;s README, not ours. Decide whether to make <code>pocket-scanner-phase2</code> the default branch, or add a pointer in the fork&rsquo;s description.
-</div>
-
-<h2>4. Registry entry (proposed)</h2>
+<h2>4. Registry entry (as updated)</h2>
 <pre>{ name: "pi-arduino (Pocket Scanner)", state: "on-hold",
   github: "pjerus/Temporal-Replay-26-Badge (public fork)",
   latest: "Phase 2 Bluetooth scan, LED demos and billboard work. Waiting on: WiFi and IR scanning (Phase 3)." }</pre>
-<p class="meta">&ldquo;Waiting on&rdquo; is a guess; confirm it.</p>
+<p class="meta">&ldquo;Waiting on&rdquo; is a guess at the next step; correct it if Phase 3 isn&rsquo;t the plan.</p>
 
 <h2>5. In plain terms</h2>
-<p>Right now the badge code lives in one GitHub repo and the notes about it live in another. The plan is to put the notes next to the code, then delete the notes-only repo. Nothing is deleted until the move is checked and you approve.</p>
+<p>Before, the badge code lived in one GitHub repo and the notes about it in another. The notes now sit next to the code and the notes-only repo is gone.</p>
 
 </main>
 </body>
