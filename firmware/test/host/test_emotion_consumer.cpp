@@ -28,6 +28,26 @@ int main() {
   c.setFaceOnScreen(true);
   assert(c.faceOnScreen());
 
+  // show-face request: set by a frame carrying the flag, taken once
+  EmotionConsumer d;
+  assert(!d.takeFaceRequest());
+  emotion::Frame plain{1, 200, 50, 0, 0};
+  d.apply(plain, 100);
+  assert(!d.takeFaceRequest());     // no flag -> no request
+  emotion::Frame show{1, 200, 50, 0, emotion::kFlagShowFace};
+  d.apply(show, 200);
+  assert(d.takeFaceRequest());
+  assert(!d.takeFaceRequest());     // consumed
+
+  // activity: every apply or clear counts once, so the badge stays awake
+  EmotionConsumer e;
+  assert(!e.takeActivity());
+  e.apply(plain, 100);
+  assert(e.takeActivity());
+  assert(!e.takeActivity());
+  e.clear();
+  assert(e.takeActivity());
+
   printf("ok\n");
   return 0;
 }

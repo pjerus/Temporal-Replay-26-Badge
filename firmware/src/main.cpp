@@ -618,6 +618,17 @@ void loop( ) {
             emotionBleStatePublish( g_emotion,
                                     (uint8_t)batteryGauge.stateOfChargePercent() );
         }
+        // A mood written over BLE counts as activity, so a battery badge an
+        // AI is driving doesn't deep-sleep from lack of motion.
+        if ( g_emotion.takeActivity() ) {
+            sleepService.caffeine = true;
+        }
+        // "Show face" waits while the GUI is handed off (Doom); a Python
+        // app blocks this loop, so the request is taken after it exits.
+        if ( guiManager.isActive() && g_emotion.takeFaceRequest()
+             && !g_emotion.faceOnScreen() ) {
+            guiManager.pushScreen( kScreenRobotFace );
+        }
     }
 #endif
 

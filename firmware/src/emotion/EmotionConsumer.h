@@ -12,8 +12,29 @@ class EmotionConsumer {
     frame_ = f;
     setAtMs_ = nowMs;
     active_ = true;
+    if (f.flags & emotion::kFlagShowFace) faceRequested_ = true;
+    activity_ = true;
   }
-  void clear() { active_ = false; }
+  void clear() {
+    active_ = false;
+    activity_ = true;
+  }
+
+  // A write asked for the face screen. The main loop takes it once the GUI
+  // is free (a running app blocks the loop, so the request waits for it).
+  bool takeFaceRequest() {
+    if (!faceRequested_) return false;
+    faceRequested_ = false;
+    return true;
+  }
+
+  // A write arrived since the last take; the main loop turns it into
+  // "not idle" so a battery badge driven over BLE doesn't deep-sleep.
+  bool takeActivity() {
+    if (!activity_) return false;
+    activity_ = false;
+    return true;
+  }
 
   bool activeAt(uint32_t nowMs) const {
     if (!active_) return false;
@@ -44,5 +65,7 @@ class EmotionConsumer {
   uint32_t setAtMs_ = 0;
   volatile bool active_ = false;
   volatile bool faceOnScreen_ = false;
+  volatile bool faceRequested_ = false;
+  volatile bool activity_ = false;
   volatile uint8_t autoMood_ = 0;
 };

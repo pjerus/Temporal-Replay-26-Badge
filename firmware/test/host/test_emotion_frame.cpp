@@ -23,6 +23,12 @@ int main() {
   Frame c{};
   assert(decode(clr, kFrameLen, c));
   assert(c.flags & kFlagClear);
+  // show-face flag is bit2, distinct from speaking and clear
+  static_assert(kFlagShowFace == 0x04, "show-face is bit2 (matches python)");
+  uint8_t sf[kFrameLen] = {1, 200, 0, 0, 0, kFlagShowFace};
+  Frame s{};
+  assert(decode(sf, kFrameLen, s));
+  assert((s.flags & kFlagShowFace) && !(s.flags & kFlagClear));
   printf("ok\n");
   return 0;
 }
