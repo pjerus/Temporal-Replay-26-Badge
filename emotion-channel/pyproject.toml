@@ -1,0 +1,8 @@
+[project]
+name = "emotion-channel"
+version = "0.1.0"
+description = "Inject emotions (mood + intensity + duration) onto a BLE device; badge robot face is the first adopter."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
