@@ -30,11 +30,55 @@ namespace {
 EmotionConsumer* s_consumer = nullptr;
 BLECharacteristic* s_stateChar = nullptr;
 uint8_t s_secret[8] = {0};
+uint8_t s_lastBattery = 0;
+
+// Recompute the 7-byte state characteristic from the consumer. Called by
+// the 1 Hz publisher and, crucially, right after a write applies — so a
+// client reading state immediately after an inject sees the new mood
+// instead of the value from the last tick.
+void composeState() {
+  if (!s_stateChar || !s_consumer) return;
+  const uint32_t now = millis();
+  const bool active = s_consumer->activeAt(now);
+
+  uint8_t flags = 0;
+  if (active) flags |= 0x01;
+  if (s_consumer->faceOnScreen()) flags |= 0x02;
+
+  uint32_t msLeft = s_consumer->msLeftAt(now);
+  uint16_t ds;
+  if (msLeft == UINT32_MAX) {
+    ds = 0xFFFF;  // latch
+  } else {
+    uint32_t d = msLeft / 100;
+    ds = d > 0xFFFF ? 0xFFFF : (uint16_t)d;
+  }
+
+  uint8_t buf[kStateLen];
+  buf[0] = flags;
+  buf[1] = active ? s_consumer->mood() : 0;
+  buf[2] = active ? (uint8_t)(s_consumer->intensity() * 255.0f + 0.5f) : 0;
+  buf[3] = (uint8_t)(ds & 0xFF);
+  buf[4] = (uint8_t)((ds >> 8) & 0xFF);
+  buf[5] = s_consumer->autonomousMood();
+  buf[6] = s_lastBattery;
+  s_stateChar->setValue(buf, sizeof(buf));
+}
 
 // A write is [8-byte shared secret][6-byte emotion frame] = 14 bytes.
 // The Arduino BLE onWrite() cannot return a GATT error, so a malformed
 // or unauthorized write is silently ignored — the client confirms the
 // result by reading the state characteristic.
+// A BLE peripheral stops advertising while a central is connected and,
+// with the Arduino BLE API, does not resume on its own. Restart it on
+// disconnect so the badge stays reachable for repeated connections.
+class ServerCb : public BLEServerCallbacks {
+  void onDisconnect(BLEServer* s) override {
+    (void)s;
+    BLEDevice::startAdvertising();
+  }
+};
+
 class WriteCb : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* c) override {
     if (!s_consumer) return;
@@ -45,6 +89,7 @@ class WriteCb : public BLECharacteristicCallbacks {
     emotion::Frame f;
     if (!emotion::decode(data + 8, emotion::kFrameLen, f)) return;   // bad frame
     s_consumer->apply(f, millis());
+    composeState();  // refresh state now, so the client's read-back is fresh
   }
 };
 }  // namespace
@@ -55,6 +100,7 @@ void emotionBleBegin(EmotionConsumer& consumer, const uint8_t secret[8], const c
 
   BLEDevice::init(advName ? advName : "badge");
   BLEServer* server = BLEDevice::createServer();
+  server->setCallbacks(new ServerCb());
   BLEService* svc = server->createService(EMO_SVC_UUID);
 
   BLECharacteristic* writeChar =
@@ -75,32 +121,9 @@ void emotionBleBegin(EmotionConsumer& consumer, const uint8_t secret[8], const c
 }
 
 void emotionBleStatePublish(EmotionConsumer& consumer, uint8_t batteryPct) {
-  if (!s_stateChar) return;
-  const uint32_t now = millis();
-  const bool active = consumer.activeAt(now);
-
-  uint8_t flags = 0;
-  if (active) flags |= 0x01;
-  if (consumer.faceOnScreen()) flags |= 0x02;
-
-  uint32_t msLeft = consumer.msLeftAt(now);
-  uint16_t ds;
-  if (msLeft == UINT32_MAX) {
-    ds = 0xFFFF;  // latch
-  } else {
-    uint32_t d = msLeft / 100;
-    ds = d > 0xFFFF ? 0xFFFF : (uint16_t)d;
-  }
-
-  uint8_t buf[kStateLen];
-  buf[0] = flags;
-  buf[1] = active ? consumer.mood() : 0;
-  buf[2] = active ? (uint8_t)(consumer.intensity() * 255.0f + 0.5f) : 0;
-  buf[3] = (uint8_t)(ds & 0xFF);
-  buf[4] = (uint8_t)((ds >> 8) & 0xFF);
-  buf[5] = consumer.autonomousMood();
-  buf[6] = batteryPct;
-  s_stateChar->setValue(buf, sizeof(buf));
+  (void)consumer;  // same instance as s_consumer, bound in emotionBleBegin
+  s_lastBattery = batteryPct;
+  composeState();
 }
 
 #endif  // BADGE_ENABLE_EMOTION_BLE
