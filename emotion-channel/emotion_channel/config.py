@@ -23,3 +23,32 @@ def badge_secret() -> bytes:
 
 def api_key() -> str:
     return os.environ.get("EMOTION_API_KEY", "")
+
+
+# Registered with the local-dev-hosting port registry (see Task 9 note).
+DEFAULT_BRIDGE_PORT = 8026
+
+
+def bridge_port() -> int:
+    return int(os.environ.get("EMOTION_BRIDGE_PORT", DEFAULT_BRIDGE_PORT))
+
+
+def badge_registry() -> dict:
+    """{target: {"address", "secret"}} for the bridge. From EMOTION_BADGES
+    (JSON {name: {address, secret}}) or, for a single badge, from
+    EMOTION_BADGE_ADDRESS + the shared secret."""
+    raw = os.environ.get("EMOTION_BADGES")
+    if raw:
+        import json
+        data = json.loads(raw)
+        return {
+            name: {
+                "address": v["address"],
+                "secret": v["secret"].encode() if isinstance(v["secret"], str) else bytes(v["secret"]),
+            }
+            for name, v in data.items()
+        }
+    addr = os.environ.get("EMOTION_BADGE_ADDRESS")
+    if addr:
+        return {"badge": {"address": addr, "secret": badge_secret()}}
+    return {}

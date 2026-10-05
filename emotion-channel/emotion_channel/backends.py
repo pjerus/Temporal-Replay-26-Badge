@@ -92,3 +92,47 @@ class BleBackend:
         if self._client is not None and self._client.is_connected:
             await self._client.disconnect()
         self._client = None
+
+
+class HttpBackend:
+    """Client-side mirror of the bridge, so a skill can drive a badge
+    through the HTTP endpoint with the same EmotionClient it would use for
+    direct BLE. Decodes the frame and reposts it as the bridge's JSON."""
+
+    def __init__(self, base_url: str, api_key: str, target: str):
+        self.base_url = base_url.rstrip("/")
+        self.api_key = api_key
+        self.target = target
+        self._cached = None  # state bytes from the last send, consumed by read_state
+
+    def _headers(self) -> dict:
+        return {"Authorization": f"Bearer {self.api_key}"}
+
+    async def send(self, frame: bytes) -> None:
+        import base64
+        import httpx
+        from .frame import decode_emotion
+        d = decode_emotion(frame)
+        payload = {
+            "target": self.target, "mood": d["mood"], "intensity": d["intensity"],
+            "ttl_ms": d["ttl_ms"], "source": d["source"],
+        }
+        async with httpx.AsyncClient() as c:
+            r = await c.post(f"{self.base_url}/emotion", json=payload, headers=self._headers())
+        if r.status_code == 502:
+            raise BadgeUnreachable(r.json().get("error", "badge unreachable"))
+        r.raise_for_status()
+        self._cached = base64.b64decode(r.json()["state_raw"])
+
+    async def read_state(self) -> bytes:
+        import base64
+        import httpx
+        if self._cached is not None:
+            raw, self._cached = self._cached, None
+            return raw
+        async with httpx.AsyncClient() as c:
+            r = await c.get(f"{self.base_url}/state", params={"target": self.target}, headers=self._headers())
+        if r.status_code == 502:
+            raise BadgeUnreachable(r.json().get("error", "badge unreachable"))
+        r.raise_for_status()
+        return base64.b64decode(r.json()["state_raw"])
