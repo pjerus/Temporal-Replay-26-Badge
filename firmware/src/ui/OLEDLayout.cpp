@@ -369,7 +369,7 @@ void drawNameStatusHeader(oled& d, const char* name) {
 }
 
 void drawStatusHeaderImpl(oled& d, const char* title, bool firstNameFallback) {
-  d.setFont(UIFonts::kText);
+  d.setFont(UIFonts::kChrome);
   d.setDrawColor(1);
 
   char timeBuf[8] = {};
@@ -482,7 +482,7 @@ void drawNavFooter(oled& d, const char* text, const char* actionLabel) {
   // drawActionFooter so the two helpers visually agree.
   int textClipR = kScreenW;
   if (actionLabel && actionLabel[0]) {
-    d.setFont(UIFonts::kText);
+    d.setFont(UIFonts::kChrome);
     const ButtonGlyphs::Button button = confirmButton();
     const int actionW = ButtonGlyphs::measureHint(d, button, actionLabel);
     const int actionX = 121 - actionW;
@@ -493,7 +493,7 @@ void drawNavFooter(oled& d, const char* text, const char* actionLabel) {
   }
 
   if (text && text[0]) {
-    d.setFontPreset(FONT_TINY);
+    d.setFont(UIFonts::kChrome);
     if (textClipR < kScreenW) {
       d.setClipWindow(0, kFooterTopY + 1, textClipR, kScreenH);
       d.drawStr(0, kFooterTextBaseY, text);
@@ -524,7 +524,7 @@ void drawActionFooter(oled& d, const char* text, const char* actionLabel) {
 
   d.setDrawColor(1);
   d.drawHLine(0, kFooterTopY, kScreenW);
-  d.setFont(UIFonts::kText);
+  d.setFont(UIFonts::kChrome);
 
   const bool hasAction = actionLabel[0] != '\0';
   int textClipW = kScreenW - kFooterTextX;
@@ -592,7 +592,7 @@ static void drawStarFooterImpl(oled& d, const char* text, bool withRule) {
   drawFooterStars(d, y);
   if (!text || !text[0]) return;
 
-  d.setFontPreset(FONT_TINY);
+  d.setFont(UIFonts::kChrome);
   constexpr int kPadX = 8;
   constexpr int availW = kScreenW - 2 * kPadX;     // 112 px
   const int textW = d.getStrWidth(text);
@@ -703,9 +703,9 @@ ModalChrome drawModalChrome(oled& d, int boxX, int boxY, int boxW, int boxH,
     d.setDrawColor(0);
   }
 
-  // Same font as the rest of the UI (Schedule list, Settings, etc.)
-  // so modal title + body have a consistent voice.
-  d.setFont(UIFonts::kText);
+  // Compact chrome font so the title strip (sized for a ~6 px font)
+  // stays uncrowded; menu/body text elsewhere keeps kText.
+  d.setFont(UIFonts::kChrome);
 
   // Optional subhead — sticky, right-aligned in the title strip with
   // a 1-px vertical divider on its left.
