@@ -1,7 +1,9 @@
 # Temporal Badge
 
-Conference badge for Temporal's events. ESP32-S3-MINI-1 (XIAO form factor) with SSD1309
-OLED, IR TX/RX for attendee pairing, joystick, tilt switch, and NVS-backed identity.
+Conference badge for Temporal's events. The current build (`echo`) targets an
+ESP32-S3-WROOM-1 (N16R8) on a custom board with a 128×64 SSD1309 OLED, IR TX/RX for
+attendee pairing, joystick, tilt switch, and NVS-backed identity. (Earlier revisions —
+see Hardware Targets below — used other modules; DELTA was an ESP32-S3-MINI-1 XIAO.)
 
 ## Hardware
 

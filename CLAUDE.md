@@ -1,6 +1,6 @@
 # Temporal Badge — Development Guidelines
 
-Conference badge (ESP32-S3-MINI-1 / XIAO form factor). Firmware is Arduino C++ (PlatformIO) with an embedded MicroPython runtime. All active source is in `firmware/src/`. Build via `firmware/build.sh`; flash via `ignition/start.sh`.
+Conference badge. The current/default build (`echo`) targets an ESP32-S3-WROOM-1 (N16R8) on a custom board (`EchoDefines.h`); earlier revisions differ — DELTA was an ESP32-S3-MINI-1 XIAO (`DeltaDefines.h`). Firmware is Arduino C++ (PlatformIO) with an embedded MicroPython runtime. All active source is in `firmware/src/`. Build via `firmware/build.sh`; flash via `ignition/start.sh`.
 
 ---
 
