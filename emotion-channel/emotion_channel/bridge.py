@@ -15,6 +15,8 @@ from .frame import encode_emotion
 def create_app(registry, api_key, backend_factory=BleBackend):
     """registry: {target: {"address": str, "secret": bytes}}. One backend
     is kept per target (so a BLE connection is reused across requests)."""
+    if not api_key:
+        raise ValueError("api_key must be set (EMOTION_API_KEY); refusing to serve with auth disabled")
     app = FastAPI(title="emotion-bridge")
     backends = {}
 
@@ -22,7 +24,7 @@ def create_app(registry, api_key, backend_factory=BleBackend):
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail="missing bearer token")
         token = authorization[len("Bearer "):]
-        if not secrets.compare_digest(token, api_key):
+        if not token or not secrets.compare_digest(token, api_key):
             raise HTTPException(status_code=401, detail="bad api key")
 
     def backend_for(target):

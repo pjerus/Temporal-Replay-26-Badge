@@ -1,3 +1,4 @@
+import pytest
 from fastapi.testclient import TestClient
 from emotion_channel.bridge import create_app
 from emotion_channel.backends import BadgeUnreachable
@@ -37,6 +38,18 @@ def test_unknown_target():
     r = app().post("/emotion", headers={"Authorization": "Bearer k3y"},
                    json={"target": "nope", "mood": "happy", "intensity": 0.8, "ttl_ms": 20000})
     assert r.status_code == 404
+
+
+def test_empty_api_key_refused():
+    # Fail closed: an unset EMOTION_API_KEY must not start an open endpoint.
+    with pytest.raises(ValueError):
+        create_app(REG, api_key="")
+
+
+def test_empty_token_rejected():
+    r = app().post("/emotion", headers={"Authorization": "Bearer "},
+                   json={"target": "lobby", "mood": "happy", "intensity": 0.8, "ttl_ms": 20000})
+    assert r.status_code == 401
 
 
 def test_badge_unreachable_is_502():
