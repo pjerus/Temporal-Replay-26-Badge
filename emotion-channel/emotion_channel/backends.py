@@ -45,29 +45,50 @@ def parse_state(buf: bytes) -> dict:
 
 
 class BleBackend:
-    """Talks directly to the badge's GATT service over Bluetooth LE."""
+    """Talks directly to the badge's GATT service over Bluetooth LE.
+
+    Holds one connection and reuses it across send/read — reconnecting per
+    call is slow and, on macOS, the address often won't re-resolve between
+    back-to-back connects."""
 
     def __init__(self, address: str, secret: bytes, *, uuids: dict | None = None):
         self.address = address
         self.secret = secret
         self.uuids = uuids or config.DEFAULT_UUIDS
+        self._client = None
 
-    async def send(self, frame: bytes) -> None:
+    async def _ensure(self):
         from bleak import BleakClient
         from bleak.exc import BleakError
+        if self._client is not None and self._client.is_connected:
+            return self._client
         try:
-            async with BleakClient(self.address) as c:
-                await c.write_gatt_char(
-                    self.uuids["emotion"], self.secret + frame, response=True
-                )
+            self._client = BleakClient(self.address)
+            await self._client.connect()
+            return self._client
+        except (BleakError, asyncio.TimeoutError, OSError) as e:
+            self._client = None
+            raise BadgeUnreachable(str(e)) from e
+
+    async def send(self, frame: bytes) -> None:
+        from bleak.exc import BleakError
+        c = await self._ensure()
+        try:
+            await c.write_gatt_char(
+                self.uuids["emotion"], self.secret + frame, response=True
+            )
         except (BleakError, asyncio.TimeoutError, OSError) as e:
             raise BadgeUnreachable(str(e)) from e
 
     async def read_state(self) -> bytes:
-        from bleak import BleakClient
         from bleak.exc import BleakError
+        c = await self._ensure()
         try:
-            async with BleakClient(self.address) as c:
-                return bytes(await c.read_gatt_char(self.uuids["state"]))
+            return bytes(await c.read_gatt_char(self.uuids["state"]))
         except (BleakError, asyncio.TimeoutError, OSError) as e:
             raise BadgeUnreachable(str(e)) from e
+
+    async def close(self) -> None:
+        if self._client is not None and self._client.is_connected:
+            await self._client.disconnect()
+        self._client = None

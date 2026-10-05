@@ -34,10 +34,14 @@ async def main() -> None:
         address = dev.address
         print(f"found {address}")
 
-    client = EmotionClient(BleBackend(address, config.badge_secret()))
-    print("state before:", await client.state())
-    print(f"injecting {args.mood} @ {args.intensity} for {args.ttl_ms} ms ...")
-    print("state after: ", await client.inject(args.mood, args.intensity, args.ttl_ms))
+    be = BleBackend(address, config.badge_secret())
+    client = EmotionClient(be)
+    try:
+        print("state before:", await client.state())
+        print(f"injecting {args.mood} @ {args.intensity} for {args.ttl_ms} ms ...")
+        print("state after: ", await client.inject(args.mood, args.intensity, args.ttl_ms))
+    finally:
+        await be.close()
 
 
 if __name__ == "__main__":
