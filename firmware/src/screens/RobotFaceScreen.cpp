@@ -158,6 +158,7 @@ void RobotFaceScreen::render(oled& d, GUIManager& gui) {
       else { mood_ = kNeutral; nextMoodMs_ = now + 4500 + random(5000); }
     }
     moodAmt_ += (((mood_ == kNeutral) ? 0.f : 1.f) - moodAmt_) * 0.12f;
+    if (emotion_) emotion_->setAutonomousMood((uint8_t)mood_);
   }
 
   // ── Geometry ──

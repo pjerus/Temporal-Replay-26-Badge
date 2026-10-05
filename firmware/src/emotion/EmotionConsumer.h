@@ -34,9 +34,15 @@ class EmotionConsumer {
   void setFaceOnScreen(bool v) { faceOnScreen_ = v; }
   bool faceOnScreen() const { return faceOnScreen_; }
 
+  // The mood the autonomous (idle) loop is currently showing, for state
+  // readback. Set by the face when it is not overridden.
+  void setAutonomousMood(uint8_t m) { autoMood_ = m; }
+  uint8_t autonomousMood() const { return autoMood_; }
+
  private:
   emotion::Frame frame_{};
   uint32_t setAtMs_ = 0;
   volatile bool active_ = false;
   volatile bool faceOnScreen_ = false;
+  volatile uint8_t autoMood_ = 0;
 };
