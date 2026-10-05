@@ -18,6 +18,11 @@ int main() {
   // reject out-of-range mood
   uint8_t bad[kFrameLen] = {9, 0, 0, 0, 0, 0};
   assert(!decode(bad, kFrameLen, h));
+  // clear flag decodes
+  uint8_t clr[kFrameLen] = {0, 0, 0, 0, 0, kFlagClear};
+  Frame c{};
+  assert(decode(clr, kFrameLen, c));
+  assert(c.flags & kFlagClear);
   printf("ok\n");
   return 0;
 }

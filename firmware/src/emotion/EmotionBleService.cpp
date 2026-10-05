@@ -88,7 +88,11 @@ class WriteCb : public BLECharacteristicCallbacks {
     if (memcmp(data, s_secret, 8) != 0) return;                     // bad auth
     emotion::Frame f;
     if (!emotion::decode(data + 8, emotion::kFrameLen, f)) return;   // bad frame
-    s_consumer->apply(f, millis());
+    if (f.flags & emotion::kFlagClear) {
+      s_consumer->clear();  // escape: drop the override, back to autonomous
+    } else {
+      s_consumer->apply(f, millis());
+    }
     composeState();  // refresh state now, so the client's read-back is fresh
   }
 };

@@ -6,12 +6,13 @@ Layout (6 bytes, little-endian):
     byte 1   intensity (0..255 -> 0.0..1.0)
     byte 2-3 ttl in deciseconds (uint16; 0 = latch until replaced/cleared)
     byte 4   source id
-    byte 5   flags (bit0 = speaking)
+    byte 5   flags (bit0 = speaking, bit1 = clear -> drop any override)
 """
 import struct
 
 MOODS = ["neutral", "happy", "tired", "sad", "angry", "surprised", "curious", "scared"]
 _SPEAKING_BIT = 0x01
+_CLEAR_BIT = 0x02
 
 
 def _mood_index(mood):
@@ -33,6 +34,12 @@ def encode_emotion(mood, intensity, ttl_ms, source=0, speaking=False):
     return struct.pack("<BBHBB", mi, inten, ttl_ds, source & 0xFF, flags)
 
 
+def encode_clear(source=0):
+    """A frame that drops any active override and returns the device to its
+    autonomous behaviour. Mood/intensity/ttl are ignored by the consumer."""
+    return struct.pack("<BBHBB", 0, 0, 0, source & 0xFF, _CLEAR_BIT)
+
+
 def decode_emotion(buf):
     if len(buf) != 6:
         raise ValueError(f"emotion frame must be 6 bytes, got {len(buf)}")
@@ -45,4 +52,5 @@ def decode_emotion(buf):
         "ttl_ms": ttl_ds * 100,
         "source": source,
         "speaking": bool(flags & _SPEAKING_BIT),
+        "clear": bool(flags & _CLEAR_BIT),
     }

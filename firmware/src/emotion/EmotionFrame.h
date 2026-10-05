@@ -11,11 +11,12 @@
 //   byte 1   intensity (0..255)
 //   byte 2-3 ttl in deciseconds (uint16; 0 = latch until replaced/cleared)
 //   byte 4   source id
-//   byte 5   flags (bit0 = speaking)
+//   byte 5   flags (bit0 = speaking, bit1 = clear -> drop any override)
 namespace emotion {
 constexpr size_t kFrameLen = 6;
 constexpr uint8_t kMoodCount = 8;
 constexpr uint8_t kFlagSpeaking = 0x01;
+constexpr uint8_t kFlagClear = 0x02;
 
 struct Frame {
   uint8_t mood;       // 0..7

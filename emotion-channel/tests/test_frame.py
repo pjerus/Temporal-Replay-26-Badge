@@ -1,5 +1,5 @@
 import pytest
-from emotion_channel.frame import encode_emotion, decode_emotion, MOODS
+from emotion_channel.frame import encode_emotion, encode_clear, decode_emotion, MOODS
 
 
 def test_roundtrip_happy():
@@ -34,3 +34,13 @@ def test_bad_mood_rejected():
 def test_short_buffer_rejected():
     with pytest.raises(ValueError):
         decode_emotion(b"\x01\x02")
+
+
+def test_encode_clear_sets_clear_bit():
+    d = decode_emotion(encode_clear(source=2))
+    assert d["clear"] is True
+    assert d["source"] == 2
+
+
+def test_normal_frame_is_not_clear():
+    assert decode_emotion(encode_emotion("happy", 0.5, 1000))["clear"] is False

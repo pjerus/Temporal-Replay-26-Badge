@@ -208,8 +208,13 @@ void RobotFaceScreen::handleInput(const Inputs& inputs, int16_t cursorX,
   (void)cursorY;
   const Inputs::ButtonEdges& e = inputs.edges();
   if (e.cancelPressed || e.bPressed) { gui.popScreen(); return; }
-  if (e.confirmPressed) {  // nudge a fresh expression on demand
-    if (mood_ == kNeutral) pickExpressiveMood();
-    else nextMoodMs_ = millis();
+  if (e.confirmPressed) {
+    if (emotion_ && emotion_->activeAt(millis())) {
+      emotion_->clear();  // escape: drop an injected emotion, back to autonomous
+    } else if (mood_ == kNeutral) {  // otherwise nudge a fresh expression on demand
+      pickExpressiveMood();
+    } else {
+      nextMoodMs_ = millis();
+    }
   }
 }
