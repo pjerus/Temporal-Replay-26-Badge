@@ -80,6 +80,7 @@ void RobotFaceScreen::pickGaze() {
 void RobotFaceScreen::updateMatrixMouth(int shift) {
 #ifdef BADGE_HAS_LED_MATRIX
   const int bucket = (int)mood_;
+  if (bucket < 0 || bucket >= 8) return;  // defensive: never index kMouths out of bounds
   if (bucket == lastMouthMood_ && shift == lastMouthShift_) return;
   lastMouthMood_ = bucket;
   lastMouthShift_ = shift;
