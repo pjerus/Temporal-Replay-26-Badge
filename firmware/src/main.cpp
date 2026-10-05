@@ -12,6 +12,8 @@
 #include "hardware/Inputs.h"
 #include "hardware/LEDmatrix.h"
 #include "hardware/Power.h"
+#include "emotion/EmotionGlobals.h"
+#include "emotion/EmotionBleService.h"
 #include "infra/Scheduler.h"
 #include "esp32-hal-gpio.h"
 #include "hardware/oled.h"
@@ -65,6 +67,7 @@ HapticsService hapticsService;
 FileBrowser fileBrowser;
 GUIManager guiManager;
 MicroPythonMatrixService microPythonMatrix;
+EmotionConsumer g_emotion;
 TaskHandle_t gIrTaskHandle = NULL;
 
 bool gWakeOnlyMode = false;
@@ -483,6 +486,16 @@ extern "C" void initDeferredPeripherals() {
     // startup when BADGE_ENABLE_BLE_PROXIMITY is explicitly enabled.
 #endif
 
+#ifdef BADGE_ENABLE_EMOTION_BLE
+    // Emotion channel: minimal BLE GATT peripheral an AI can write to.
+    // Dev shared secret ("TEMPORAL"); TODO source from NVS/BadgeConfig
+    // before shipping.
+    static const uint8_t kEmotionSecret[8] = {
+        0x54, 0x45, 0x4d, 0x50, 0x4f, 0x52, 0x41, 0x4c};
+    emotionBleBegin(g_emotion, kEmotionSecret, "TemporalBadge");
+    Serial.println("Emotion BLE service started (deferred)");
+#endif
+
     // Restore user-preferred OLED contrast now that we're past the
     // brownout-sensitive boot window.
     badgeConfig.applyAll();
@@ -596,5 +609,17 @@ void loop( ) {
     if ( !gWakeOnlyMode && mpy_poll != nullptr ) {
          mpy_poll( );
     }
+
+#ifdef BADGE_ENABLE_EMOTION_BLE
+    {
+        static uint32_t lastEmoPubMs = 0;
+        if ( millis() - lastEmoPubMs >= 1000 ) {
+            lastEmoPubMs = millis();
+            emotionBleStatePublish( g_emotion,
+                                    (uint8_t)batteryGauge.stateOfChargePercent() );
+        }
+    }
+#endif
+
     Power::applyLoopPacing( );
 }

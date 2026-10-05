@@ -31,6 +31,8 @@
 #include "screens/draw/ScalePickerScreen.h"
 #include "screens/draw/StickerPickerScreen.h"
 #include "screens/draw/AnimDoc.h"
+#include "screens/RobotFaceScreen.h"
+#include "emotion/EmotionGlobals.h"
 
 #ifdef BADGE_HAS_DOOM
 #include "doom/DoomScreen.h"
@@ -247,6 +249,8 @@ static const GridMenuItem kCuratedMenuItems[] = {
       &assetLibraryVisible, nullptr, nullptr},
     {"MATRIX", "Pick a persistent LED matrix animation or app",
      AppIcons::matrixApps, kScreenMatrixApps, nullptr, nullptr, nullptr},
+    {"ROBOT", "A lively robot face that blinks, looks around, and reacts",
+     AppIcons::animations, kScreenRobotFace, nullptr, nullptr, nullptr},
     // {"HAPTICS",     "Preview vibration strength, frequency, and duration",
     //  AppIcons::workflow,  kScreenHaptics,     nullptr, nullptr, nullptr},
     {"FILES",       "Browse files on the badge filesystem",
@@ -417,6 +421,7 @@ static WifiScreen sWifi;
 static UpdateFirmwareScreen sUpdateFirmware;
 static AssetLibraryScreen sAssetLibrary;
 static AssetDetailScreen sAssetDetail;
+static RobotFaceScreen sRobotFace;
 #ifdef BADGE_HAS_DOOM
 static DoomScreen sDoom;
 #endif
@@ -654,6 +659,8 @@ void GUIManager::begin(oled* display, Inputs* inputs) {
   registerScreen(&sUpdateFirmware);
   registerScreen(&sAssetLibrary);
   registerScreen(&sAssetDetail);
+  registerScreen(&sRobotFace);
+  sRobotFace.bindEmotion(&g_emotion);
 #ifdef BADGE_HAS_DOOM
   registerScreen(&sDoom);
 #endif
