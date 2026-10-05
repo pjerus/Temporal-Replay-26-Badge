@@ -88,6 +88,25 @@ class BleBackend:
         except (BleakError, asyncio.TimeoutError, OSError) as e:
             raise BadgeUnreachable(str(e)) from e
 
+    async def clear(self) -> None:
+        from bleak.exc import BleakError
+        from .frame import encode_clear
+        c = await self._ensure()
+        try:
+            await c.write_gatt_char(self.uuids["emotion"], self.secret + encode_clear(), response=True)
+        except (BleakError, asyncio.TimeoutError, OSError) as e:
+            raise BadgeUnreachable(str(e)) from e
+
+    async def sequence(self, steps, loop: bool = False) -> None:
+        # Direct BLE: step through here (blocks the caller for the timeline).
+        from .frame import encode_emotion
+        while True:
+            for s in steps:
+                await self.send(encode_emotion(s["mood"], s["intensity"], s["ttl_ms"], source=s.get("source", 0)))
+                await asyncio.sleep(s["ttl_ms"] / 1000)
+            if not loop:
+                return
+
     async def close(self) -> None:
         if self._client is not None and self._client.is_connected:
             await self._client.disconnect()
@@ -136,3 +155,23 @@ class HttpBackend:
             raise BadgeUnreachable(r.json().get("error", "badge unreachable"))
         r.raise_for_status()
         return base64.b64decode(r.json()["state_raw"])
+
+    async def clear(self) -> None:
+        import base64
+        import httpx
+        async with httpx.AsyncClient() as c:
+            r = await c.request("DELETE", f"{self.base_url}/emotion",
+                                params={"target": self.target}, headers=self._headers())
+        if r.status_code == 502:
+            raise BadgeUnreachable(r.json().get("error", "badge unreachable"))
+        r.raise_for_status()
+        self._cached = base64.b64decode(r.json()["state_raw"])
+
+    async def sequence(self, steps, loop: bool = False) -> None:
+        # Via the bridge the sequence runs server-side; this just hands it off.
+        import httpx
+        async with httpx.AsyncClient() as c:
+            r = await c.post(f"{self.base_url}/sequence",
+                             json={"target": self.target, "steps": list(steps), "loop": loop},
+                             headers=self._headers())
+        r.raise_for_status()

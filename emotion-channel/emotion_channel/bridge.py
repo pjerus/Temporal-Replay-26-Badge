@@ -21,6 +21,7 @@ def create_app(registry, api_key, backend_factory=BleBackend):
     app = FastAPI(title="emotion-bridge")
     backends = {}
     locks = {}
+    sequences = {}  # target -> running asyncio.Task
 
     def lock_for(target):
         # One BleakClient per target can't run overlapping ops; serialize
@@ -28,6 +29,12 @@ def create_app(registry, api_key, backend_factory=BleBackend):
         if target not in locks:
             locks[target] = asyncio.Lock()
         return locks[target]
+
+    def cancel_sequence(target):
+        # Any new command for a target takes over from a running sequence.
+        task = sequences.pop(target, None)
+        if task is not None:
+            task.cancel()
 
     def check_auth(authorization):
         if not authorization or not authorization.startswith("Bearer "):
@@ -54,16 +61,58 @@ def create_app(registry, api_key, backend_factory=BleBackend):
     @app.post("/emotion")
     async def post_emotion(body: dict, authorization: str = Header(None)):
         check_auth(authorization)
-        be = backend_for(body.get("target"))
+        target = body.get("target")
+        be = backend_for(target)
+        cancel_sequence(target)  # a direct inject takes over from a sequence
         frame = encode_emotion(body["mood"], body["intensity"], body["ttl_ms"],
                                source=body.get("source", 0))
         try:
-            async with lock_for(body.get("target")):
+            async with lock_for(target):
                 await be.send(frame)
                 raw = await be.read_state()
         except BadgeUnreachable as e:
             return JSONResponse(status_code=502, content={"ok": False, "error": str(e)})
         return _state_response(raw, applied=parse_state(raw)["override"] is not None)
+
+    @app.delete("/emotion")
+    async def delete_emotion(target: str, authorization: str = Header(None)):
+        check_auth(authorization)
+        be = backend_for(target)
+        cancel_sequence(target)
+        try:
+            async with lock_for(target):
+                await be.clear()
+                raw = await be.read_state()
+        except BadgeUnreachable as e:
+            return JSONResponse(status_code=502, content={"ok": False, "error": str(e)})
+        return _state_response(raw)
+
+    @app.post("/sequence")
+    async def post_sequence(body: dict, authorization: str = Header(None)):
+        check_auth(authorization)
+        target = body.get("target")
+        be = backend_for(target)
+        steps = list(body.get("steps") or [])
+        loop = bool(body.get("loop", False))
+        cancel_sequence(target)
+
+        async def play():
+            try:
+                while True:
+                    for s in steps:
+                        frame = encode_emotion(s["mood"], s["intensity"], s["ttl_ms"],
+                                               source=s.get("source", 0))
+                        async with lock_for(target):
+                            await be.send(frame)
+                        await asyncio.sleep(s["ttl_ms"] / 1000)
+                    if not loop:
+                        return
+            except BadgeUnreachable:
+                return  # badge dropped mid-sequence; stop quietly
+
+        if steps:
+            sequences[target] = asyncio.create_task(play())
+        return {"ok": True, "accepted": len(steps), "loop": loop}
 
     @app.get("/state")
     async def get_state(target: str, authorization: str = Header(None)):

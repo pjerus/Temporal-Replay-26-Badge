@@ -15,5 +15,17 @@ class EmotionClient:
         await self.backend.send(frame)
         return parse_state(await self.backend.read_state())
 
+    async def clear(self) -> dict:
+        """Drop any override and return the device to its autonomous behaviour."""
+        await self.backend.clear()
+        return parse_state(await self.backend.read_state())
+
+    async def sequence(self, steps, loop=False) -> dict:
+        """Play a list of {mood, intensity, ttl_ms} steps in order. Over the
+        bridge this runs server-side (returns at once); direct over BLE it
+        runs here. Either way a later inject/clear/sequence interrupts it."""
+        await self.backend.sequence(steps, loop)
+        return parse_state(await self.backend.read_state())
+
     async def state(self) -> dict:
         return parse_state(await self.backend.read_state())

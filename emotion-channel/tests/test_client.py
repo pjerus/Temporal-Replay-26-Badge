@@ -42,3 +42,20 @@ def test_client_inject_roundtrips_frame():
     state = asyncio.run(c.inject("happy", 0.8, 20000))
     assert decode_emotion(be.sent)["mood"] == "happy"   # backend received a valid frame
     assert state["override"]["mood"] == "happy"
+
+
+def test_client_clear_calls_backend_and_reads_state():
+    class FakeClear:
+        def __init__(self):
+            self.cleared = False
+
+        async def clear(self):
+            self.cleared = True
+
+        async def read_state(self):
+            return bytes([0, 0, 0, 0, 0, 0, 90])  # no override
+
+    be = FakeClear()
+    state = asyncio.run(EmotionClient(be).clear())
+    assert be.cleared is True
+    assert state["override"] is None
