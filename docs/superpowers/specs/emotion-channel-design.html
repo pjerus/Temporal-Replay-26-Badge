@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emotion Channel — Design</title>
+<style>
+  :root {
+    --bg: #faf9f7; --fg: #1d1c1a; --muted: #6b675f; --card: #ffffff;
+    --line: #e2ddd4; --accent: #b4532a; --accent2: #2a6db4;
+    --ok: #3f7d4a; --warn: #a8761a; --bad: #a23b2d;
+    --rec: #eaf4ec; --recline: #3f7d4a;
+    --node: #fff; --nodeline: #cfc8bc; --arrow: #8a8478;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171614; --fg: #ece8e1; --muted: #9c968b; --card: #211f1c;
+      --line: #35322d; --accent: #e8824f; --accent2: #6aa6e8;
+      --ok: #6ab77a; --warn: #d6a94e; --bad: #e07a68;
+      --rec: #1d2a20; --recline: #6ab77a;
+      --node: #2a2824; --nodeline: #4a463f; --arrow: #8f897d;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171614; --fg: #ece8e1; --muted: #9c968b; --card: #211f1c;
+    --line: #35322d; --accent: #e8824f; --accent2: #6aa6e8;
+    --ok: #6ab77a; --warn: #d6a94e; --bad: #e07a68;
+    --rec: #1d2a20; --recline: #6ab77a;
+    --node: #2a2824; --nodeline: #4a463f; --arrow: #8f897d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font-family: var(--sans); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.page { border-bottom: 2px solid var(--line); padding-bottom: 18px; margin-bottom: 8px; }
+  h1 { font-size: 1.9rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); font-size: 0.95rem; }
+  .meta { color: var(--muted); font-size: 0.82rem; margin-top: 10px; font-family: var(--mono); }
+  h2 { font-size: 1.3rem; margin: 40px 0 10px; padding-top: 8px; letter-spacing: -0.01em; }
+  h3 { font-size: 1.05rem; margin: 22px 0 6px; }
+  p { margin: 10px 0; }
+  code { font-family: var(--mono); font-size: 0.88em; background: var(--card);
+    border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+  pre { font-family: var(--mono); font-size: 0.84rem; background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; }
+  pre code { background: none; border: 0; padding: 0; }
+  .card { background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px; margin: 14px 0; }
+  .rec { background: var(--rec); border-left: 4px solid var(--recline); }
+  .tag { display: inline-block; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.04em; padding: 2px 8px; border-radius: 999px; vertical-align: middle;
+    margin-left: 8px; }
+  .tag.rec { background: var(--recline); color: #fff; border: 0; }
+  .tag.ble { background: var(--accent2); color: #fff; }
+  .tag.wifi { background: var(--warn); color: #2b2410; }
+  table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 0.88rem; }
+  th, td { border: 1px solid var(--line); padding: 7px 9px; text-align: left; vertical-align: top; }
+  th { background: var(--card); font-weight: 600; }
+  td.y { color: var(--ok); font-weight: 600; }
+  td.n { color: var(--bad); font-weight: 600; }
+  td.m { color: var(--warn); font-weight: 600; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .pros { color: var(--ok); } .cons { color: var(--bad); }
+  .flow { width: 100%; height: auto; margin: 8px 0 2px; }
+  .legend { font-size: 0.8rem; color: var(--muted); margin: 2px 0 0; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 680px) { .two { grid-template-columns: 1fr; } }
+  .k { color: var(--accent); font-weight: 600; }
+  .note { font-size: 0.85rem; color: var(--muted); }
+  .toggle { position: fixed; top: 12px; right: 12px; font-size: 0.78rem;
+    background: var(--card); border: 1px solid var(--line); color: var(--fg);
+    border-radius: 8px; padding: 6px 10px; cursor: pointer; font-family: var(--mono); }
+</style>
+</head>
+<body>
+<button class="toggle" onclick="(function(){var r=document.documentElement;var c=r.getAttribute('data-theme');r.setAttribute('data-theme', c==='dark'?'light':(c==='light'?'dark':'dark')));})()">◐ theme</button>
+<div class="wrap">
+
+<header class="page">
+  <h1>Emotion Channel</h1>
+  <div class="sub">A reusable way for a skill-enabled AI to inject emotions onto a device — first adopter: the Temporal badge robot face.</div>
+  <div class="meta">Started 2026-10-05 · Revision 5 (2026-10-05) — added voice (BT speaker + mic) as a host-side extension · status: ready for spec review</div>
+</header>
+
+<h2>In one line</h2>
+<p>An AI sends a small message — <span class="k">mood + strength + duration</span> — the device applies it to the robot face at once (overriding the idle liveliness), and when the duration runs out the face goes back to being lively on its own. The parts are built to be transport-agnostic and dropped into the shared code library so other projects can adopt them.</p>
+
+<h2>What's already settled</h2>
+<div class="card">
+<table>
+  <tr><th>Decision</th><th>Choice</th><th>Notes</th></tr>
+  <tr><td>Message payload</td><td><b>mood + intensity + duration</b></td><td>Self-expiring; a very long / infinite duration is the "latch until cleared" case.</td></tr>
+  <tr><td>Apply semantics</td><td><b>Override, then expire</b></td><td>Injected emotion takes over for its duration, then autonomous liveliness resumes.</td></tr>
+  <tr><td>Deliverable</td><td><b>Endpoint + device client + Claude skill</b></td><td>Full loop so a skill-enabled AI can inject emotions immediately.</td></tr>
+  <tr><td>Reusable &amp; in the library</td><td><b>Yes</b></td><td>Schema, device consumer, and client are transport-independent and project-independent.</td></tr>
+</table>
+</div>
+
+<h2>The message</h2>
+<pre><code>{
+  "mood":      "happy",   // one of: neutral happy tired sad angry
+                          //         surprised curious scared
+  "intensity": 0.8,       // 0.0–1.0  how strong the expression reads
+  "ttl_ms":    20000,     // how long to hold it; 0 = until replaced/cleared
+  "source":    "assistant" // optional, for logging/attribution
+}</code></pre>
+<p class="note">Intensity maps onto the face's existing tween amount (lid depth, eye-size pop); duration drives the override timer. Nothing here is badge-specific — another device could map the same message onto LEDs, a servo, or a screen.</p>
+
+<h2>The shared core (same for every transport)</h2>
+<svg class="flow" viewBox="0 0 900 120" role="img" aria-label="Emotion flows from AI through a transport to the device consumer, which overrides the face then expires back to autonomous">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker>
+  </defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="40" width="130" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="73" y="64" text-anchor="middle" fill="var(--fg)">AI / skill</text>
+    <line x1="140" y1="60" x2="196" y2="60" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah)"/>
+    <text x="168" y="52" text-anchor="middle" fill="var(--muted)" font-size="11">emotion</text>
+    <rect x="200" y="40" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="275" y="64" text-anchor="middle" fill="var(--fg)">transport</text>
+    <line x1="352" y1="60" x2="408" y2="60" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah)"/>
+    <rect x="412" y="40" width="175" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="499" y="64" text-anchor="middle" fill="var(--fg)">device consumer</text>
+    <line x1="589" y1="60" x2="645" y2="60" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah)"/>
+    <rect x="649" y="26" width="243" height="68" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="770" y="50" text-anchor="middle" fill="var(--fg)">robot face: override</text>
+    <text x="770" y="70" text-anchor="middle" fill="var(--muted)" font-size="11">then expire → autonomous</text>
+  </g>
+</svg>
+<p class="note">Only the middle box — <b>transport</b> — changes between the options below. The library pieces are: the message schema, the <b>device consumer</b> (receives a message, drives the face, runs the expire timer), and a small <b>client</b> the AI uses to send one.</p>
+
+<h2>Transport options</h2>
+<p>Columns that matter: does the badge need WiFi, is there a cloud dependency, where can the AI run, and does it keep your "endpoint with an API key" model. Bluetooth hops are proximity-based (~10 m line of sight); WiFi hops need the badge connected to a network.</p>
+
+<h3>A · WiFi cloud relay + poll <span class="tag wifi">WiFi</span></h3>
+<svg class="flow" viewBox="0 0 900 90" role="img" aria-label="AI posts to a cloud relay over HTTPS with a key; the badge polls the relay over WiFi">
+  <defs><marker id="ah2" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker></defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="28" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="83" y="52" text-anchor="middle" fill="var(--fg)">AI / skill (anywhere)</text>
+    <line x1="160" y1="48" x2="320" y2="48" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah2)"/>
+    <text x="240" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">HTTPS + API key</text>
+    <rect x="324" y="28" width="200" height="40" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="424" y="52" text-anchor="middle" fill="var(--fg)">Modal relay (holds latest)</text>
+    <line x1="700" y1="48" x2="528" y2="48" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah2)"/>
+    <text x="614" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">WiFi poll</text>
+    <rect x="704" y="28" width="188" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="798" y="52" text-anchor="middle" fill="var(--fg)">Badge (robot face)</text>
+  </g>
+</svg>
+<p><span class="pros">+ Reaches the badge from anywhere on the internet.</span> &nbsp; <span class="cons">− Needs the badge on WiFi, an always-on cloud service, and adds poll latency. WiFi is the pathway you'd rather avoid.</span></p>
+
+<h3>B · WiFi local relay + poll <span class="tag wifi">WiFi</span></h3>
+<p>Same shape as A, but the relay runs on this Mac (<code>.test</code> via Caddy). <span class="pros">+ No cloud; stays local.</span> &nbsp; <span class="cons">− Still needs the badge on WiFi, and a remote AI can't reach it — only agents on your LAN.</span></p>
+
+<h3>C · Badge hosts an HTTP server <span class="tag wifi">WiFi</span></h3>
+<p>The badge serves the endpoint itself; the AI POSTs to the badge's IP. <span class="pros">+ No middle service.</span> &nbsp; <span class="cons">− The AI must be on the same network and know the badge's IP, and it puts an inbound server (new attack surface) on the ESP32. Fragile for a badge that roams.</span></p>
+
+<h3>D · BLE bridge — small local "emotion API" relays over Bluetooth <span class="tag ble">Bluetooth</span> <span class="tag rec">recommended</span></h3>
+<svg class="flow" viewBox="0 0 900 90" role="img" aria-label="AI posts to a local bridge with an API key; the bridge writes to the badge over BLE GATT">
+  <defs><marker id="ah3" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker></defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="28" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="83" y="52" text-anchor="middle" fill="var(--fg)">AI / skill</text>
+    <line x1="160" y1="48" x2="322" y2="48" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah3)"/>
+    <text x="241" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">HTTP + API key</text>
+    <rect x="326" y="28" width="210" height="40" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="431" y="52" text-anchor="middle" fill="var(--fg)">Mac bridge (bleak) · .test</text>
+    <line x1="538" y1="48" x2="700" y2="48" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah3)"/>
+    <text x="619" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">BLE GATT write</text>
+    <rect x="704" y="28" width="188" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="798" y="52" text-anchor="middle" fill="var(--fg)">Badge (GATT service)</text>
+  </g>
+</svg>
+<p>The badge advertises a small BLE <b>Emotion</b> GATT service. A tiny local bridge on the Mac exposes the API-key HTTP endpoint the AI expects, and relays each message to the badge over Bluetooth.</p>
+<p><span class="pros">+ No WiFi on the badge; proximity-based and low latency; keeps your "endpoint with an API key" model; the AI can be any HTTP caller (even remote, if the bridge is reachable); the bridge + GATT service + schema are a clean reusable kit.</span> &nbsp; <span class="cons">− One extra local process (the bridge) must be running near the badge.</span></p>
+
+<h3>E · BLE direct — the skill talks straight to the badge <span class="tag ble">Bluetooth</span></h3>
+<svg class="flow" viewBox="0 0 900 90" role="img" aria-label="A skill on a Bluetooth-equipped host writes directly to the badge over BLE GATT">
+  <defs><marker id="ah4" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker></defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="28" width="260" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="138" y="52" text-anchor="middle" fill="var(--fg)">AI / skill on a BLE host (this Mac)</text>
+    <line x1="270" y1="48" x2="560" y2="48" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ah4)"/>
+    <text x="415" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">BLE GATT write (shared secret)</text>
+    <rect x="564" y="28" width="328" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="728" y="52" text-anchor="middle" fill="var(--fg)">Badge (GATT service)</text>
+  </g>
+</svg>
+<p>The skill itself speaks Bluetooth (via <code>bleak</code>) and writes the characteristic directly — no HTTP service at all. <span class="pros">+ Leanest; fewest moving parts.</span> &nbsp; <span class="cons">− Only works when the AI runs on a machine with Bluetooth in range; no HTTP "API key" endpoint (auth becomes a GATT shared-secret/bonding), which drifts from your original "little API service" framing.</span></p>
+
+<h2>Side by side</h2>
+<table>
+  <tr>
+    <th>Option</th><th>Badge needs WiFi</th><th>Cloud</th><th>AI can run…</th>
+    <th>Latency</th><th>"API key endpoint"</th><th>Library reuse</th>
+  </tr>
+  <tr><td>A · WiFi cloud</td><td class="n">yes</td><td class="n">yes</td><td>anywhere</td><td class="m">poll delay</td><td class="y">yes</td><td class="m">medium</td></tr>
+  <tr><td>B · WiFi local</td><td class="n">yes</td><td class="y">no</td><td>your LAN</td><td class="m">poll delay</td><td class="y">yes</td><td class="m">medium</td></tr>
+  <tr><td>C · Badge server</td><td class="n">yes</td><td class="y">no</td><td>same LAN</td><td class="y">instant</td><td class="y">yes</td><td class="n">low</td></tr>
+  <tr style="background:var(--rec)"><td><b>D · BLE bridge</b></td><td class="y">no</td><td class="y">no</td><td>via bridge</td><td class="y">instant</td><td class="y">yes</td><td class="y">high</td></tr>
+  <tr><td>E · BLE direct</td><td class="y">no</td><td class="y">no</td><td>BLE host only</td><td class="y">instant</td><td class="n">no</td><td class="y">high</td></tr>
+</table>
+
+<h2>Recommendation</h2>
+<div class="card rec">
+<p><b>Option D — BLE bridge.</b> It satisfies everything you asked for: Bluetooth on the last hop (no WiFi on the badge), a real <b>endpoint with an API key</b> for the AI to call, and a clean modular kit for the library. It degrades gracefully too — the same badge GATT service also supports Option E (a local skill writing directly) with no firmware change, so "direct" stays available as a lighter path for local use.</p>
+<p class="note">Infinite-duration messages give you the latch-until-cleared behaviour you weren't sure about, as a special case of the same override model — no separate mode needed.</p>
+</div>
+
+<h2>Does the agent get feedback?</h2>
+<p>In the one-way sketch earlier, no — the agent would be injecting blind. It shouldn't be, and Bluetooth makes the fix cheap: GATT is two-way, so the same service that accepts a write can answer it and expose readable state, with no second transport. That's a further point for Option D.</p>
+<svg class="flow" viewBox="0 0 900 96" role="img" aria-label="AI and bridge and badge, with emotion going forward and ack plus state coming back">
+  <defs>
+    <marker id="af" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker>
+    <marker id="ab" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent2)"/></marker>
+  </defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="30" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="83" y="54" text-anchor="middle" fill="var(--fg)">AI / skill</text>
+    <rect x="375" y="30" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="450" y="54" text-anchor="middle" fill="var(--fg)">bridge</text>
+    <rect x="742" y="30" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="817" y="54" text-anchor="middle" fill="var(--fg)">badge</text>
+    <line x1="160" y1="42" x2="373" y2="42" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#af)"/>
+    <line x1="527" y1="42" x2="740" y2="42" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#af)"/>
+    <text x="266" y="34" text-anchor="middle" fill="var(--muted)" font-size="11">emotion</text>
+    <text x="633" y="34" text-anchor="middle" fill="var(--muted)" font-size="11">GATT write</text>
+    <line x1="740" y1="60" x2="527" y2="60" stroke="var(--accent2)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
+    <line x1="373" y1="60" x2="160" y2="60" stroke="var(--accent2)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ab)"/>
+    <text x="633" y="80" text-anchor="middle" fill="var(--accent2)" font-size="11">ack + state (+ events)</text>
+    <text x="266" y="80" text-anchor="middle" fill="var(--accent2)" font-size="11">ack + state</text>
+  </g>
+</svg>
+<div class="card">
+<table>
+  <tr><th>Level</th><th>How</th><th>What the agent learns</th></tr>
+  <tr><td><b>Delivery ack</b></td><td>write-with-response (synchronous)</td><td>The message was received and accepted — or rejected, with why.</td></tr>
+  <tr><td><b>Current state</b></td><td>a readable characteristic / <code>GET /state</code></td><td>What the face is doing right now — see shape below.</td></tr>
+  <tr><td><b>Events</b> <span class="note">(optional, later)</span></td><td>GATT notify → bridge streams/queues them</td><td>Pushed moments: override expired, a button was pressed, a boop happened.</td></tr>
+</table>
+</div>
+<pre><code>GET /state  →
+{
+  "override":   { "mood": "happy", "intensity": 0.8, "ms_left": 12400 },  // or null
+  "autonomous": "neutral",     // what the idle loop is showing when no override
+  "face_on_screen": true,      // is the robot face even the active screen?
+  "battery_pct": 76
+}</code></pre>
+<p class="note">The robot face is one screen among many. If the user has navigated away, an injected emotion has nowhere to show — so <b>face_on_screen</b> is part of the readback, and the bridge reports "accepted, but not currently visible" rather than letting the agent assume it worked.</p>
+
+<h2>What lands in the library</h2>
+<div class="two">
+  <div class="card">
+    <h3>Transport-independent</h3>
+    <ul>
+      <li><b>Emotion schema</b> — the message + validation (one source of truth, shared by device and client).</li>
+      <li><b>Device consumer</b> — takes a message, drives a face/output, runs the override+expire timer. The badge's <code>RobotFaceScreen</code> becomes its first adopter.</li>
+      <li><b>Client</b> — build one message, send it.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>BLE-specific (Option D)</h3>
+    <ul>
+      <li><b>Badge GATT service</b> — one "emotion" characteristic + auth, in the existing <code>ble/</code> module.</li>
+      <li><b>Bridge</b> — tiny local service: API-key HTTP in, BLE write out.</li>
+      <li><b>Claude skill</b> — thin wrapper so a skill-enabled AI injects an emotion in one call.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="decision">Decision</h2>
+<div class="card rec">
+<p><b>Option D — BLE bridge — is the primary build</b>, chosen for modularity: the device, the relay, and the skill stay independent, swappable pieces. <b>Option E (direct) is supported by the same code</b>, not a second build — both write the identical badge GATT service. The way that falls out:</p>
+<ul>
+  <li>One reusable <b>emotion client</b> with two interchangeable backends — a <b>BLE backend</b> (speaks GATT straight to the badge = <b>E</b>) and an <b>HTTP backend</b> (speaks to the bridge = <b>D</b>).</li>
+  <li>The <b>bridge</b> is itself just a caller of the BLE backend, wrapped in an API-key HTTP endpoint.</li>
+  <li>So a skill on a Bluetooth-equipped host can skip the bridge entirely; a skill elsewhere goes through it. Same schema, same device, same client library.</li>
+</ul>
+</div>
+
+<h2>Detailed design</h2>
+
+<h3>Badge — BLE GATT service (NimBLE peripheral)</h3>
+<p>A small custom GATT service added to the existing <code>ble/</code> module. Characteristics:</p>
+<table>
+  <tr><th>Characteristic</th><th>Access</th><th>Carries</th></tr>
+  <tr><td><code>emotion</code></td><td>Write (with response)</td><td>One emotion frame. Write-with-response <i>is</i> the delivery ack.</td></tr>
+  <tr><td><code>state</code></td><td>Read</td><td>Current status struct (see readback shape above).</td></tr>
+  <tr><td><code>events</code> <span class="note">(phase 2)</span></td><td>Notify</td><td>Pushed moments: override expired, button pressed, boop.</td></tr>
+</table>
+<p>Compact binary frame (BLE-MTU friendly, ~6 bytes):</p>
+<pre><code>byte 0   mood       (0..7: neutral happy tired sad angry surprised curious scared)
+byte 1   intensity  (0..255 → 0.0–1.0)
+byte 2-3 ttl        (uint16, 100 ms units; 0 = until replaced/cleared)
+byte 4   source     (small id for attribution/logging)
++ auth tag          (shared-secret token; exact scheme fixed in the plan)</code></pre>
+
+<h3>Badge — how the face consumes it</h3>
+<ul>
+  <li>A shared <code>EmotionOverride</code> object is set from the <code>emotion</code> write callback: <code>{ active, mood, intensity, setAtMs, ttlMs }</code>.</li>
+  <li><code>RobotFaceScreen</code> checks it each frame: active &amp; unexpired → drive the mood and intensity from the override instead of the autonomous picker; expired → clear and resume the lively loop. This is the whole of "override, then expire."</li>
+  <li>The <code>state</code> read is composed from <code>EmotionOverride</code> + the GUI's current screen id (<code>face_on_screen</code>) + battery. Writes are accepted even when the face isn't the active screen; the readback reports <code>face_on_screen:false</code> so the agent isn't misled. <b>v1 does not auto-switch to the face</b> — too intrusive.</li>
+</ul>
+
+<h3>Bridge — "emotion API" (any BLE host — Mac, Raspberry Pi, Linux — Python + bleak)</h3>
+<table>
+  <tr><th>Endpoint</th><th>Does</th></tr>
+  <tr><td><code>POST /emotion</code><br><span class="note">Authorization: Bearer &lt;key&gt;</span></td><td>Validate key → encode frame → BLE write-with-response to the badge → return <code>{ ok, applied, state }</code>.</td></tr>
+  <tr><td><code>GET /state</code></td><td>Read the badge <code>state</code> characteristic → return it as JSON.</td></tr>
+</table>
+<p class="note">All settings are passed in, never baked into shared code: the API key, the badge BLE address/name, the shared secret, and the bind port (registered via the <code>local-dev-hosting</code> recipe, reachable at a <code>.test</code> host). The reusable client and bridge take these as arguments/env with defaults.</p>
+
+<h3>Skill — the AI's one call</h3>
+<p>A thin Claude skill over the client: <code>inject_emotion(mood, intensity, duration)</code> and <code>get_face_state()</code>. It selects the HTTP backend (bridge) or BLE backend (direct) from config, so the same skill serves D and E.</p>
+
+<h2>Intermediate hosts (Raspberry Pi &amp; friends)</h2>
+<p>Because the bridge is host-agnostic Python + bleak (macOS CoreBluetooth <i>or</i> Linux BlueZ), the same bridge runs on a Raspberry Pi unchanged. That makes the Pi the piece that carries the network, so the badge never has to:</p>
+<svg class="flow" viewBox="0 0 900 150" role="img" aria-label="A remote AI reaches a Pi gateway over the network; the Pi relays to several badges over Bluetooth">
+  <defs><marker id="ap" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker></defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="55" width="160" height="40" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="88" y="79" text-anchor="middle" fill="var(--fg)">AI / skill (remote)</text>
+    <line x1="170" y1="75" x2="322" y2="75" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ap)"/>
+    <text x="246" y="67" text-anchor="middle" fill="var(--muted)" font-size="11">network · HTTP + API key</text>
+    <rect x="326" y="52" width="200" height="46" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="426" y="72" text-anchor="middle" fill="var(--fg)">Raspberry Pi gateway</text>
+    <text x="426" y="89" text-anchor="middle" fill="var(--muted)" font-size="11">(bridge · holds the key)</text>
+    <line x1="528" y1="66" x2="700" y2="34" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ap)"/>
+    <line x1="528" y1="75" x2="700" y2="75" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ap)"/>
+    <line x1="528" y1="84" x2="700" y2="116" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#ap)"/>
+    <text x="614" y="64" text-anchor="middle" fill="var(--muted)" font-size="11">BLE</text>
+    <rect x="704" y="14" width="150" height="38" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="779" y="37" text-anchor="middle" fill="var(--fg)">Badge A</text>
+    <rect x="704" y="56" width="150" height="38" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="779" y="79" text-anchor="middle" fill="var(--fg)">Badge B</text>
+    <rect x="704" y="98" width="150" height="38" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="779" y="121" text-anchor="middle" fill="var(--fg)">Badge C</text>
+  </g>
+</svg>
+<ul>
+  <li><b>Pi as a fixed gateway.</b> A Pi near a table or booth is the always-on networked endpoint; a remote AI (cloud, laptop, this Mac) calls it over the network, and it relays to nearby badges over Bluetooth. Network reach, badge stays offline.</li>
+  <li><b>One Pi, many badges.</b> The bridge API takes a target badge (BLE address/name), so a single Pi addresses a cluster. Badge addresses live in the Pi's config, never in the code.</li>
+  <li><b>Tiers compose.</b> Each hop is a backend we already have: <code>cloud relay → Pi gateway → badge</code>, or a skill running <i>on</i> the Pi talking straight to badges (that's Option E, just hosted on the Pi). Same schema and client throughout.</li>
+  <li><b>Self-contained unit.</b> The Pi can also run the agent/skill itself — a table-top box that needs only power and proximity.</li>
+</ul>
+<p class="note">Impact on the build: the bridge must be multi-badge from the start (a target parameter + a per-host config of badge addresses). Nothing about the badge firmware changes — it's the same GATT service whether the writer is a Mac, a Pi gateway, or a direct skill.</p>
+
+<h2>Extension: voice — Bluetooth speaker + microphone <span class="note">(not v1)</span></h2>
+<p>A natural next capability on the same gateway: give the robot ears and a voice. <b>Key constraint:</b> the badge's ESP32-S3 is <b>Bluetooth LE only — no Bluetooth Classic</b>, and consumer speakers/mics use Classic (A2DP / HFP). So the speaker and microphone pair with the <b>host</b> (Mac or Pi), not the badge. That keeps audio and the heavy compute on the capable host and leaves the badge a cheap BLE expression device.</p>
+<svg class="flow" viewBox="0 0 900 160" role="img" aria-label="A Bluetooth mic feeds the host agent; the host speaks through a Bluetooth speaker and drives the badge face over BLE">
+  <defs><marker id="av" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--arrow)"/></marker></defs>
+  <g font-family="var(--sans)" font-size="13">
+    <rect x="8" y="58" width="150" height="40" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="83" y="78" text-anchor="middle" fill="var(--fg)">BT mic — ears</text>
+    <line x1="160" y1="78" x2="326" y2="78" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#av)"/>
+    <rect x="330" y="52" width="210" height="52" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="435" y="73" text-anchor="middle" fill="var(--fg)">Host agent (Pi / Mac)</text>
+    <text x="435" y="91" text-anchor="middle" fill="var(--muted)" font-size="11">speech-to-text · model · text-to-speech</text>
+    <line x1="540" y1="66" x2="708" y2="36" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#av)"/>
+    <text x="628" y="40" text-anchor="middle" fill="var(--muted)" font-size="11">BT audio</text>
+    <rect x="712" y="16" width="170" height="40" rx="9" fill="var(--node)" stroke="var(--accent2)"/>
+    <text x="797" y="40" text-anchor="middle" fill="var(--fg)">BT speaker — voice</text>
+    <line x1="540" y1="90" x2="708" y2="118" stroke="var(--arrow)" stroke-width="1.6" marker-end="url(#av)"/>
+    <text x="628" y="118" text-anchor="middle" fill="var(--muted)" font-size="11">BLE emotion</text>
+    <rect x="712" y="100" width="170" height="44" rx="9" fill="var(--node)" stroke="var(--nodeline)"/>
+    <text x="797" y="120" text-anchor="middle" fill="var(--fg)">Badge face</text>
+    <text x="797" y="136" text-anchor="middle" fill="var(--muted)" font-size="11">eyes + mouth, synced</text>
+  </g>
+</svg>
+<ul>
+  <li><b>Composition.</b> The agent listens (mic → speech-to-text), thinks, then speaks (text-to-speech → speaker) <i>and</i> drives the face in sync — the LED-matrix mouth can animate to speech amplitude/visemes for lip-sync, and the mood rides the emotion channel we're building now.</li>
+  <li><b>Why it's a sibling, not v1.</b> It's a larger capability (audio I/O, STT/TTS, turn-taking) that only shares the gateway host. Keeping it separate lets the emotion channel ship first; this gets its own spec when we're ready.</li>
+  <li><b>What v1 should leave room for.</b> Two small hooks: a <code>speaking</code> state the agent can raise so the mouth lip-syncs, and the phase-2 <code>events</code> notify (e.g. "heard a wake word") — both already fit the schema and GATT service, so no rework later.</li>
+</ul>
+
+<h2>What lands in the library (revised)</h2>
+<div class="two">
+  <div class="card">
+    <h3>Reusable, project-independent</h3>
+    <ul>
+      <li><b>Wire-format + schema</b> — the one source of truth for the frame and the <code>/state</code> shape.</li>
+      <li><b>C++ <code>EmotionConsumer</code></b> — device side: apply an override, run the expire timer, report state. The badge is its first adopter.</li>
+      <li><b>Python emotion client</b> — two backends (BLE / HTTP), settings as arguments.</li>
+      <li><b>Bridge</b> — API-key HTTP wrapper around the BLE backend.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Badge-specific glue (stays in this repo)</h3>
+    <ul>
+      <li>The NimBLE GATT service wiring in <code>ble/</code>.</li>
+      <li><code>RobotFaceScreen</code> reading the <code>EmotionConsumer</code>.</li>
+      <li>The <code>face_on_screen</code> hook into <code>GUIManager</code>.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Risks &amp; impact</h2>
+<div class="card">
+<ul>
+  <li><b>BLE is currently compiled out.</b> The firmware excludes the <code>ble/</code> folder from the build and gates it behind an unset <code>BADGE_ENABLE_BLE_PROXIMITY</code> flag, deliberately, to keep the offline firmware small. This feature re-enables a <i>minimal</i> NimBLE GATT <b>peripheral</b> (not the proximity scanner) behind its own flag — and the <b>flash/RAM cost must be measured</b> against the current ~2.6&nbsp;MB image and the OTA-frozen 16&nbsp;MB partition layout before we commit.</li>
+  <li><b>Auth.</b> The bridge holds the AI's API key; the badge link needs its own protection (NimBLE bonding and/or a shared-secret tag in the frame). Exact scheme is settled in the implementation plan, not hand-waved.</li>
+  <li><b>One screen among many.</b> Handled by <code>face_on_screen</code> in the readback; not a silent failure.</li>
+</ul>
+</div>
+
+<h2>Next</h2>
+<p>This is the design for review. Once you've looked it over, the next step is the implementation plan (via the writing-plans skill) — no code until then.</p>
+
+</div>
+</body>
+</html>
