@@ -165,6 +165,7 @@ class oled : public IService {
   void drawVLine(int x, int y, int h);
   void drawLine(int x0, int y0, int x1, int y1);
   void fillTriangle(int x0, int y0, int x1, int y1, int x2, int y2);
+  void drawDisc(int x, int y, int r);  // filled circle
   void setDrawColor(uint8_t color);
 
   void setFlipped(bool flipped);

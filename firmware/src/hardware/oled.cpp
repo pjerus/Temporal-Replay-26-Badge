@@ -1106,6 +1106,11 @@ void oled::fillTriangle(int x0, int y0, int x1, int y1, int x2, int y2) {
   u8g2_.drawTriangle(x0, y0, x1, y1, x2, y2);
 }
 
+void oled::drawDisc(int x, int y, int r) {
+  if (!initialized_ || r < 1) return;
+  u8g2_.drawDisc(x, y, r, U8G2_DRAW_ALL);
+}
+
 void oled::setDrawColor(uint8_t color) {
   if (!initialized_) return;
   u8g2_.setDrawColor(color > 2 ? 1 : color);

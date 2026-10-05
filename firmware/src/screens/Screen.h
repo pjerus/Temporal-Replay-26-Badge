@@ -49,6 +49,7 @@ enum ScreenId : uint8_t {
   kScreenUpdateFirmware,
   kScreenAssetLibrary,
   kScreenAssetDetail,
+  kScreenRobotFace,
 #ifdef BADGE_HAS_DOOM
   kScreenDoom,
 #endif
