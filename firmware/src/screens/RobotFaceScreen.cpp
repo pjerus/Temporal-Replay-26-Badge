@@ -207,7 +207,7 @@ void RobotFaceScreen::handleInput(const Inputs& inputs, int16_t cursorX,
   (void)cursorX;
   (void)cursorY;
   const Inputs::ButtonEdges& e = inputs.edges();
-  if (e.cancelPressed || e.bPressed) { gui.popScreen(); return; }
+  if (e.cancelPressed) { gui.popScreen(); return; }  // semantic cancel, so confirm (even when swapped onto B) reaches the clear below
   if (e.confirmPressed) {
     if (emotion_ && emotion_->activeAt(millis())) {
       emotion_->clear();  // escape: drop an injected emotion, back to autonomous
