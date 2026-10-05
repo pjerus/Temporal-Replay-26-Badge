@@ -2,6 +2,7 @@
 one or more badges reached over BLE. A skill-enabled AI POSTs a mood and
 gets back the resulting face state. Runs on the host (laptop) or on an
 intermediate box like a Raspberry Pi that owns several badges."""
+import asyncio
 import base64
 import secrets
 
@@ -19,6 +20,14 @@ def create_app(registry, api_key, backend_factory=BleBackend):
         raise ValueError("api_key must be set (EMOTION_API_KEY); refusing to serve with auth disabled")
     app = FastAPI(title="emotion-bridge")
     backends = {}
+    locks = {}
+
+    def lock_for(target):
+        # One BleakClient per target can't run overlapping ops; serialize
+        # every operation on a target so concurrent callers don't cross.
+        if target not in locks:
+            locks[target] = asyncio.Lock()
+        return locks[target]
 
     def check_auth(authorization):
         if not authorization or not authorization.startswith("Bearer "):
@@ -49,8 +58,9 @@ def create_app(registry, api_key, backend_factory=BleBackend):
         frame = encode_emotion(body["mood"], body["intensity"], body["ttl_ms"],
                                source=body.get("source", 0))
         try:
-            await be.send(frame)
-            raw = await be.read_state()
+            async with lock_for(body.get("target")):
+                await be.send(frame)
+                raw = await be.read_state()
         except BadgeUnreachable as e:
             return JSONResponse(status_code=502, content={"ok": False, "error": str(e)})
         return _state_response(raw, applied=parse_state(raw)["override"] is not None)
@@ -60,7 +70,8 @@ def create_app(registry, api_key, backend_factory=BleBackend):
         check_auth(authorization)
         be = backend_for(target)
         try:
-            raw = await be.read_state()
+            async with lock_for(target):
+                raw = await be.read_state()
         except BadgeUnreachable as e:
             return JSONResponse(status_code=502, content={"ok": False, "error": str(e)})
         return _state_response(raw)

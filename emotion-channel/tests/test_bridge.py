@@ -59,3 +59,47 @@ def test_badge_unreachable_is_502():
     r = app(Dead).post("/emotion", headers={"Authorization": "Bearer k3y"},
                        json={"target": "lobby", "mood": "happy", "intensity": 0.8, "ttl_ms": 20000})
     assert r.status_code == 502 and r.json()["ok"] is False
+
+
+def test_same_target_requests_serialize():
+    # A bleak client can't run overlapping ops; same-target requests must
+    # serialize around the send+read pair, or two readers cross.
+    import asyncio
+    import httpx
+
+    class Serial:
+        depth = 0
+        violated = False
+
+        def __init__(self, address, secret, **kw):
+            pass
+
+        async def send(self, frame):
+            Serial.depth += 1
+            if Serial.depth > 1:
+                Serial.violated = True
+            await asyncio.sleep(0.02)
+
+        async def read_state(self):
+            await asyncio.sleep(0.02)
+            Serial.depth -= 1
+            if Serial.depth != 0:
+                Serial.violated = True
+            return bytes([0b01, 1, 204, 100, 0, 0, 88])
+
+    Serial.depth, Serial.violated = 0, False
+    application = create_app(REG, api_key="k3y", backend_factory=Serial)
+    body = {"target": "lobby", "mood": "happy", "intensity": 0.5, "ttl_ms": 5000}
+    hdr = {"Authorization": "Bearer k3y"}
+
+    async def run():
+        transport = httpx.ASGITransport(app=application)
+        async with httpx.AsyncClient(transport=transport, base_url="http://t") as c:
+            return await asyncio.gather(
+                c.post("/emotion", headers=hdr, json=body),
+                c.post("/emotion", headers=hdr, json=body),
+            )
+
+    r1, r2 = asyncio.run(run())
+    assert r1.status_code == 200 and r2.status_code == 200
+    assert Serial.violated is False
