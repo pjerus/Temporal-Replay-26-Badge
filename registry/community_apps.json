@@ -3,6 +3,36 @@
   "generator": "generate_startup_files.py",
   "assets": [
     {
+      "id": "billboard",
+      "kind": "app",
+      "name": "Billboard",
+      "version": "eec96990458d",
+      "dest_dir": "/apps/billboard",
+      "size": 12012,
+      "min_free_bytes": 16108,
+      "description": " Reads the display name from /apps/billboard/name.txt (first non-empty line, stripped). Falls back to \"BADGE\" if the file is missing or empty.",
+      "files": [
+        {
+          "path": "/__init__.py",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/billboard/__init__.py"
+        },
+        {
+          "path": "/main.py",
+          "size": 12008,
+          "sha256": "32d634814867b4ac1dfd761f00b3f446f1e7ae49f41b7bf339e44fb440f6a946",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/billboard/main.py"
+        },
+        {
+          "path": "/name.txt",
+          "size": 4,
+          "sha256": "8059c84f6d21fafd086a026da91df4de4d4f44b1dfe66a23b8e5daafaefbcde1",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/billboard/name.txt"
+        }
+      ]
+    },
+    {
       "id": "breaksnake",
       "kind": "app",
       "name": "Breaksnake",
@@ -72,10 +102,10 @@
       "id": "flappy-asteroids",
       "kind": "app",
       "name": "Flappy Asteroids",
-      "version": "1ba74fc13dde",
+      "version": "81d3f7591b87",
       "dest_dir": "/apps/flappy_asteroids",
-      "size": 22866,
-      "min_free_bytes": 26962,
+      "size": 26737,
+      "min_free_bytes": 30833,
       "description": " import sys ",
       "files": [
         {
@@ -86,14 +116,14 @@
         },
         {
           "path": "/fa_engine.py",
-          "size": 10327,
-          "sha256": "fd7cb84a2953f40b1066069e768175208b1cfe629b7399a374bcfcb2a9a308bd",
+          "size": 12604,
+          "sha256": "980434a0e615cdcd0ecc00cf6ea460ffac4977c07c73ba0d2795676dd85c362e",
           "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/flappy_asteroids/fa_engine.py"
         },
         {
           "path": "/fa_screens.py",
-          "size": 5298,
-          "sha256": "b78815b02a783e14ee3963ea021651ea5d0121046906ff66665e6617a29b6c54",
+          "size": 6892,
+          "sha256": "2eb1cf4f410c1a8f748c486df9f34ba0d3baf7e11a6d89542feffc631ae0c47e",
           "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/flappy_asteroids/fa_screens.py"
         },
         {
@@ -255,14 +285,56 @@
       ]
     },
     {
+      "id": "leddemos",
+      "kind": "app",
+      "name": "Leddemos",
+      "version": "c5b1903d5eaf",
+      "dest_dir": "/apps/leddemos",
+      "size": 9354,
+      "min_free_bytes": 13450,
+      "description": " Each effect runs full-screen on the LED matrix until BACK.",
+      "files": [
+        {
+          "path": "/__init__.py",
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/leddemos/__init__.py"
+        },
+        {
+          "path": "/fire.py",
+          "size": 2350,
+          "sha256": "d1d9b0a2947e3b37f327ccc2bd0af981943c597c0c338caef703296349c376d2",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/leddemos/fire.py"
+        },
+        {
+          "path": "/main.py",
+          "size": 2560,
+          "sha256": "0cc78a40f52ccf0cd1df22bca5cfde3089e6259f00aa6f0c4bcea89b79c301e6",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/leddemos/main.py"
+        },
+        {
+          "path": "/plasma.py",
+          "size": 1661,
+          "sha256": "1df9bdca82b083b151aeabf4c6bc5d178580ba952a3a776671fcb1789ee29e5f",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/leddemos/plasma.py"
+        },
+        {
+          "path": "/rain.py",
+          "size": 2783,
+          "sha256": "59a3d058b755790e0d07c5b8912e6751b4997c01caaa62f693cd865f50281ecf",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/leddemos/rain.py"
+        }
+      ]
+    },
+    {
       "id": "scanner",
       "kind": "app",
       "name": "Scanner",
-      "version": "207e63f2948b",
+      "version": "7ea805c5f5ad",
       "dest_dir": "/apps/scanner",
-      "size": 3586,
-      "min_free_bytes": 7682,
-      "description": "/apps/scanner/main.py \u2014 Phase 1 hardware demo.  Exercises every I/O channel:",
+      "size": 9925,
+      "min_free_bytes": 14021,
+      "description": " Phase 2: pick a sub-screen (BLE Scan or Demo). BACK from a sub-screen returns here; BACK from the menu exits the app.",
       "files": [
         {
           "path": "/__init__.py",
@@ -271,9 +343,21 @@
           "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/__init__.py"
         },
         {
+          "path": "/ble.py",
+          "size": 3939,
+          "sha256": "f1c02644ee3479ebff3188dfd2f8dc3ae1a13904002df074d493be1ba07f6c2f",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/ble.py"
+        },
+        {
+          "path": "/demo.py",
+          "size": 3316,
+          "sha256": "e7ade1ac3b6f878089fe66fea274a5fe1d5bb0601157d37efe6f10ea11965456",
+          "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/demo.py"
+        },
+        {
           "path": "/main.py",
-          "size": 3586,
-          "sha256": "641fd9a0917a8d56b085801448054606575ffab638aa06be733d41cb6bd5d5dd",
+          "size": 2670,
+          "sha256": "e49067799e8a08169cdb668a956f4ac9772be3331a38565fe0d301ade24c84ed",
           "url": "https://raw.githubusercontent.com/Architeuthis-Flux/Temporal-Replay-26-Badge/main/firmware/initial_filesystem/apps/scanner/main.py"
         }
       ]

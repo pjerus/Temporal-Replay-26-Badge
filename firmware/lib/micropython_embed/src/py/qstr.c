@@ -151,7 +151,7 @@ const qstr_len_t mp_qstr_const_lengths[] = {
 const qstr_pool_t mp_qstr_const_pool = {
     &mp_qstr_const_pool_static,
     MP_QSTRnumber_of_static,
-    true,               // is_sorted
+    false,              // is_sorted=false: hand-patched ble_scan_* entries break sort invariant
     MICROPY_ALLOC_QSTR_ENTRIES_INIT,
     MP_QSTRnumber_of - MP_QSTRnumber_of_static,   // corresponds to number of strings in array just below
     #if MICROPY_QSTR_BYTES_IN_HASH
