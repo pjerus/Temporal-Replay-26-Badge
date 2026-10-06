@@ -25,3 +25,16 @@ has no memory to start). Run with PlatformIO's Python, which has pyserial:
 Found: the remote sends mode 1 (combo direct: each output forward, backward or coast) on channel 1,
 repeating about every 100 ms; the receiver stops when frames stop. Transmit power must be raised
 from the default 10% to 50% to reach a receiver inside a model. Aim the badge's top edge at the dome.
+
+## Driving the tank base
+
+    ~/.platformio/penv/bin/python pf_drive.py 5 5 1500           # both treads forward, speed 5, 1.5 s
+    ~/.platformio/penv/bin/python pf_drive.py 5 -5 1000 0 0 300 -3 -3 800   # spin right, pause, back up
+
+`pf_drive.py` (Mac side) fills in `ir_drive.py` (badge side). Speeds are -7..7 per tread, positive
+forward. It uses the "combo PWM" mode: seven speed steps per output, and the receiver still stops
+when frames stop.
+
+Measured 2026-10-06 on Pat's base, treads off the ground: output A is the left tread, B the right;
+the right side is flipped in `ir_drive.py` because the two motors face opposite ways; speed 3 is
+the slowest that turns both treads (at 2 the left one stalls). Not yet tested on the floor.
