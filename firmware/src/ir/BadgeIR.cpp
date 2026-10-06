@@ -138,6 +138,16 @@ static void irReleaseContexts() {
 }
 
 static bool irAllocContexts() {
+#ifdef BADGE_IR_TX_ONLY
+    // Send-only build: the receiver's ~25 KB (symbol buffer + decode task)
+    // does not fit beside the BLE stack, and a motor controller never listens.
+    if (!s_tx_ctx) {
+        s_tx_ctx = static_cast<nec_tx_context_t*>(
+            heap_caps_calloc(1, sizeof(nec_tx_context_t),
+                             MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA | MALLOC_CAP_8BIT));
+    }
+    return s_tx_ctx != nullptr;
+#endif
     if (s_tx_ctx && s_rx_ctx) return true;
 
     if (!s_tx_ctx) {
@@ -372,6 +382,7 @@ static bool irHwInit() {
     while (ulTaskNotifyTake(pdTRUE, 0) != 0) { /* consume stale */ }
     xTaskNotifyGive(xTaskGetCurrentTaskHandle());
 
+#ifndef BADGE_IR_TX_ONLY
     ret = nec_rx_init(s_rx_ctx, (gpio_num_t)IR_RX_PIN, APP_RMT_RESOLUTION,
                       on_frame_rx, nullptr);
     if (ret != ESP_OK) {
@@ -385,6 +396,7 @@ static bool irHwInit() {
     // consumer NEC and raw-symbol modes see the stream alongside the
     // legacy multi-word + CRC decoder.
     nec_rx_set_raw_cb(s_rx_ctx, on_raw_symbols);
+#endif
 
     // Copy encoder for raw symbol arrays (consumer NEC + raw playback).
     if (s_copy_encoder == nullptr) {
