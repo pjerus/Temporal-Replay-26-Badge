@@ -42,7 +42,7 @@
 <body>
 <main>
   <h1>Driving the treads from rocky-pi</h1>
-  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) — first draft for Pat's review · status: awaiting approval · follows on from <a href="tread-drive-ble-design.html">Tread drive over Bluetooth</a> (its decision D7)</div>
+  <div class="meta">Started 2026-10-06 · Revision 2 (2026-10-06) — approved by Pat; stage 1 built; four corrections found while building (see "Corrections from the build") · status: approved, stages 2 to 4 waiting on hardware · follows on from <a href="tread-drive-ble-design.html">Tread drive over Bluetooth</a> (its decision D7)</div>
 
   <h2>In one paragraph</h2>
   <p>Rocky's brain asks the body service on rocky-pi to drive: a left speed, a right speed and a length of time. The body service hands that to a small <em>drive driver</em>. Today's driver passes it to the mood bridge, which already holds the Bluetooth link to each badge, and the badge turns it into infrared for the LEGO receiver. Which badge drives is one setting. A different kind of motor hardware later means a new driver, not a new way of asking.</p>
@@ -186,7 +186,7 @@ GET /state → { ..., "drive": {"kind": "badge", "target": "tread", "reachable":
       <tr><th>Asked for</th><th>Answer</th></tr>
       <tr><td>Speed beyond <code>max_speed</code>, <code>ms</code> beyond <code>max_ms</code>, or not a number</td><td>422, nothing sent</td></tr>
       <tr><td>Badge or bridge out of reach</td><td>503 "treads unreachable"</td></tr>
-      <tr><td>Badge refused (low memory, or its own Drive app is open)</td><td>409 with the reason</td></tr>
+      <tr><td>Badge refused (low memory, or a command it rejected)</td><td>409 with the reason; the body service also tells the bridge to stop resending</td></tr>
       <tr><td>No <code>[drive]</code> section</td><td>404</td></tr>
     </table>
   </div>
@@ -206,10 +206,22 @@ GET /state → { ..., "drive": {"kind": "badge", "target": "tread", "reachable":
 
   <h2>Security</h2>
   <ul>
-    <li>Both endpoints keep their existing key checks. The body service's port is open to the home network, as it is today; the bridge stays reachable only from rocky-pi itself for this path.</li>
+    <li>Both endpoints keep their existing key checks. The body service's port is open to the home network, as it is today; the bridge is also reachable on the home network with its own key (the brain already uses it for moods), so it keeps its own limits: speed 7 and 10 seconds a move.</li>
     <li>This adds a way to make a physical thing move from the network, so the limits (speed, length) are enforced in the body service, not trusted from the caller.</li>
     <li><span class="tag unknown">known gap</span> The badge's 8-character secret is fixed in the firmware source and sent unencrypted over Bluetooth. It now guards motion. Fixing it (a per-badge secret and an encrypted link) is a separate piece of work and is not part of this design.</li>
   </ul>
+
+  <h2>Corrections from the build</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Revision 1 said</th><th>What is true</th></tr>
+      <tr><td>A badge with its own Drive app open answers "refused"</td><td>It ignores Bluetooth commands silently. The body service answers success while the base stays still. Reporting it needs a firmware change (a status flag).</td></tr>
+      <tr><td>A refusal is reported on the command that caused it</td><td>It can arrive one command late: the badge handles a command a moment after the bridge reads its status.</td></tr>
+      <tr><td>The state report always answers quickly</td><td>It asks the bridge each time, so a hung bridge can cost up to 2 seconds.</td></tr>
+      <tr><td><code>/stop</code> stops joints and treads</td><td>It does attempt both, always. But if one side is unreachable the answer is an error, and it does not say that the other side did stop.</td></tr>
+    </table>
+  </div>
+  <p>Stage 1 lives on branch <code>tread-drive</code> in both projects: the mood bridge at <code>24eff40</code>, rocky-robot at <code>642dbf1</code>. Not pushed. rocky-robot's own copy of the bridge package (<code>rocky/badge/emotion_channel/</code>) was not updated; the new driver does not use it.</p>
 
   <h2>Testing</h2>
   <div class="card wide">
