@@ -42,7 +42,7 @@
 <body>
 <main>
   <h1>Driving the treads from rocky-pi</h1>
-  <div class="meta">Started 2026-10-06 · Revision 2 (2026-10-06) — approved by Pat; stage 1 built; four corrections found while building (see "Corrections from the build") · status: approved, stages 2 to 4 waiting on hardware · follows on from <a href="tread-drive-ble-design.html">Tread drive over Bluetooth</a> (its decision D7)</div>
+  <div class="meta">Started 2026-10-06 · Revision 3 (2026-10-06) — stages 2 and 3 passed: the tank drives from the Mac through rocky-pi (see "Results on hardware") · status: working on rocky-pi; stage 4 and the follow-ups remain · follows on from <a href="tread-drive-ble-design.html">Tread drive over Bluetooth</a> (its decision D7)</div>
 
   <h2>In one paragraph</h2>
   <p>Rocky's brain asks the body service on rocky-pi to drive: a left speed, a right speed and a length of time. The body service hands that to a small <em>drive driver</em>. Today's driver passes it to the mood bridge, which already holds the Bluetooth link to each badge, and the badge turns it into infrared for the LEGO receiver. Which badge drives is one setting. A different kind of motor hardware later means a new driver, not a new way of asking.</p>
@@ -222,6 +222,22 @@ GET /state → { ..., "drive": {"kind": "badge", "target": "tread", "reachable":
     </table>
   </div>
   <p>Stage 1 lives on branch <code>tread-drive</code> in both projects: the mood bridge at <code>24eff40</code>, rocky-robot at <code>642dbf1</code>. Not pushed. rocky-robot's own copy of the bridge package (<code>rocky/badge/emotion_channel/</code>) was not updated; the new driver does not use it.</p>
+
+  <h2>Results on hardware (6 October)</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Stage</th><th>Result</th></tr>
+      <tr><td>2. Whole chain on the Mac</td><td><span class="tag measured">passed</span> Forward, early stop and move-replaced-by-spin all seen by Pat on the real base with the spare badge.</td></tr>
+      <tr><td>3. On rocky-pi</td><td><span class="tag measured">passed</span> Bridge updated and now holds two badges: <code>badge</code> (the face) and <code>tread</code> (the spare). Body service installed as <code>rocky-body</code> on port 8027 with a pretend arm and real treads. The same three moves, sent from the Mac, seen by Pat. A command takes about 0.25 to 0.35 s from the Mac to an answer.</td></tr>
+      <tr><td>4. Three links at once</td><td><span class="tag unknown">not run</span> Two badge links held together without trouble; the NXT brick was not connected.</td></tr>
+    </table>
+  </div>
+  <ul>
+    <li><strong>Restarting the bridge left the face badge's link stuck.</strong> Requests for it hung until the badge was switched off and on. The bridge should drop its links cleanly on shutdown, or time out a hung read.</li>
+    <li><strong>rocky-pi's address changed</strong> to <code>192.168.86.55</code> after a restart; the name <code>rocky-pi.local</code> still works.</li>
+    <li><strong>Rocky's brain does not have the body service's key yet.</strong> It was created on the Pi; the notes say it also belongs in the Mac Keychain item <code>rocky-pi-body</code>.</li>
+    <li>Old bridge code and settings are kept on the Pi as <code>src.bak-2026-10-06</code> and <code>env.bak-2026-10-06</code>.</li>
+  </ul>
 
   <h2>Testing</h2>
   <div class="card wide">
