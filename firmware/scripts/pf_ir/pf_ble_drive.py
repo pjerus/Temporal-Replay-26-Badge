@@ -6,7 +6,7 @@ Run with:  uv run --with bleak pf_ble_drive.py 4 4 1500
 """
 import asyncio, os, struct, sys
 
-NAME = "Rocky IR Tread"
+NAME = os.environ.get("ROCKY_TREAD_NAME", "Rocky IR Tread")   # the face badge keeps "TemporalBadge"
 WRITE_UUID = "98b99101-ab97-48b5-a9c9-e666e456806c"
 STATE_UUID = "1350f2e6-4bdf-4459-a813-4afaf1a8ffee"
 RESEND_S = 0.2

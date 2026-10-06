@@ -642,6 +642,7 @@ void loop( ) {
 #ifdef BADGE_ENABLE_DRIVE_BLE
     driveBleTick( (uint8_t)batteryGauge.stateOfChargePercent() );
     if ( driveBleConnected() ) sleepService.caffeine = true;   // stay awake while driven
+#ifdef BADGE_DRIVE_STATUS_SCREEN
     {
         static bool shown = false;
         if ( guiManager.isActive() && driveBleConnected() && !shown ) {
@@ -654,6 +655,7 @@ void loop( ) {
             shown = false;
         }
     }
+#endif
 #endif
 #endif
 

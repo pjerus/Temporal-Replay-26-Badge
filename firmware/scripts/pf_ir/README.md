@@ -57,3 +57,16 @@ Bluetooth drops, the badge sends a stop and goes quiet, and the LEGO receiver st
 Trim, right-side flip, channel and IR power are `tr_*` lines in the badge's `settings.txt`.
 Status prints free internal memory now and the lowest since power-on; the badge refuses to drive
 below 6 KB.
+
+Hardware results, 2026-10-06. Free internal memory with a controller connected: 12.5 KB on USB
+(lowest since power-on 7.25 KB), about 19 KB on battery. Driven cable-free on carpet: forward,
+back, both quarter turns. Stops confirmed: script killed mid-move (stopped within a second) and
+IR beam blocked (stops, resumes when uncovered). Bluetooth switched off mid-move was not tested.
+The ten-minute soak has not been run. The battery percent in the status reads 0 on battery.
+
+Two builds carry the drive service: `echo-drive` (spare badge, announces as "Rocky IR Tread",
+shows a status line) and `echo-face-drive` (the face badge: face stays on screen, Bluetooth name
+unchanged). To drive the face badge set `ROCKY_TREAD_NAME=TemporalBadge`.
+
+`badge.dev("info")` over the USB REPL reads name|title|company; `badge.dev("info", "name", "")`
+sets one field. Both badges were blanked this way.

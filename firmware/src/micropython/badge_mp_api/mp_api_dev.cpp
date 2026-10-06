@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../../identity/BadgeInfo.h"
 #include "../../identity/BadgeUID.h"
 #include "../../hardware/Inputs.h"
 
@@ -105,9 +106,35 @@ extern "C" const char *temporalbadge_runtime_dev(int argc, const char **argv)
         return uid_hex;
     }
 
+    // badge.dev("info")                      -> "name|title|company"
+    // badge.dev("info", "name"|"title"|"company", "text")  sets one field
+    // ("" blanks it) and saves. For badges that should not show a person.
+    if (strcmp(cmd, "info") == 0)
+    {
+        BadgeInfo::Fields f;
+        BadgeInfo::getCurrent(f);
+        if (argc >= 3)
+        {
+            char *dst = nullptr;
+            size_t cap = 0;
+            if (strcmp(argv[1], "name") == 0) { dst = f.name; cap = sizeof(f.name); }
+            else if (strcmp(argv[1], "title") == 0) { dst = f.title; cap = sizeof(f.title); }
+            else if (strcmp(argv[1], "company") == 0) { dst = f.company; cap = sizeof(f.company); }
+            if (!dst)
+                return "ERR info field";
+            snprintf(dst, cap, "%s", argv[2]);
+            if (!BadgeInfo::saveToFile(f))
+                return "ERR info save";
+            BadgeInfo::applyToGlobals(f);
+        }
+        snprintf(s_dev_result, sizeof(s_dev_result), "%s|%s|%s",
+                 f.name, f.title, f.company);
+        return s_dev_result;
+    }
+
     if (strcmp(cmd, "help") == 0)
     {
-        return "btn|fb|uid|help";
+        return "btn|fb|uid|info|help";
     }
 
     snprintf(s_dev_result, sizeof(s_dev_result),
