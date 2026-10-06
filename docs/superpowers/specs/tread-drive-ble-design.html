@@ -42,7 +42,7 @@
 <body>
 <main>
   <h1>Tread drive over Bluetooth</h1>
-  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) · status: waiting for Pat's review</div>
+  <div class="meta">Started 2026-10-06 · Revision 2 (2026-10-06) — Pat settled the three open points (D7 to D9) · status: approved, ready for the build plan</div>
 
   <h2>In one paragraph</h2>
   <p>The spare badge rides on the tank base with no cable. A computer (the Mac for testing, later rocky-pi) sends it a small Bluetooth message: a speed for the left tread and a speed for the right. The badge turns that into the LEGO infrared signal the base already obeys. If the messages stop for any reason, the base stops. This first version covers the two treads only; motor boards on the I2C port are a later step.</p>
@@ -204,7 +204,7 @@
       <tr><td>Tread signal maker</td><td><code>firmware/src/drive/PfTreads.h/.cpp</code></td><td>Turns left and right speeds into LEGO infrared frames: trim, right-side flip, in-between speeds. A straight port of the tuned <code>ir_drive.py</code>; no hardware calls, so it is tested on the Mac.</td></tr>
       <tr><td>Drive service</td><td><code>firmware/src/drive/DriveBleService.h/.cpp</code></td><td>The Bluetooth command and status, the timer, the stop rules, the memory floor.</td></tr>
       <tr><td>Hook-up</td><td><code>firmware/src/main.cpp</code></td><td>Start the service after the mood service; call its tick from the main loop.</td></tr>
-      <tr><td>Settings</td><td><code>firmware/settings.txt</code> (via <code>BadgeConfig</code>)</td><td>LEGO channel, left trim, right flip, transmit power. Each has a default equal to today's tuned value.</td></tr>
+      <tr><td>Settings</td><td><code>firmware/settings.txt</code> (via <code>BadgeConfig</code>)</td><td>Bluetooth name, LEGO channel, left trim, right flip, transmit power. Each has a default equal to today's tuned value.</td></tr>
       <tr><td>Build variant</td><td><code>[env:echo-drive]</code></td><td>Gains <code>-DBADGE_ENABLE_DRIVE_BLE</code>. Other builds, including the face badge's, are unchanged.</td></tr>
       <tr><td>Test controller</td><td><code>firmware/scripts/pf_ir/pf_ble_drive.py</code></td><td>Mac-side script: same arguments as <code>pf_drive.py</code>, but over Bluetooth, and it prints the memory figures.</td></tr>
     </table>
@@ -226,16 +226,11 @@
       <tr><td>D4</td><td>Tuning values are settings, not constants in the code</td><td>They change with load and floor; re-tuning should not need a rebuild.</td></tr>
       <tr><td>D5</td><td>A separate Bluetooth service, not extra fields on the mood service</td><td>The face badge's mood protocol stays untouched; the two can be told apart.</td></tr>
       <tr><td>D6</td><td>Infrared comes up when a controller connects and goes down when it leaves</td><td>Gives back 10 KB whenever nobody is driving.</td></tr>
-      <tr><td>D7</td><td>rocky-pi integration is a follow-on, not part of this build</td><td>The Mac test script proves the link first. The Pi holding two badges plus the brick at once is unproven and deserves its own test.</td></tr>
+      <tr><td>D7</td><td>Prove it from the Mac first; rocky-pi integration follows afterwards</td><td>Pat, 6 Oct. The Pi holding two badges plus the brick at once is unproven and deserves its own test.</td></tr>
+      <tr><td>D8</td><td>On the drive build the badge announces itself over Bluetooth as "Rocky IR Tread"</td><td>Pat, 6 Oct. Never confused with the face badge. The name is a setting with that default.</td></tr>
+      <tr><td>D9</td><td>The screen shows one plain status line and nothing more</td><td>Pat, 6 Oct.</td></tr>
     </table>
   </div>
-
-  <h2>Open points for Pat</h2>
-  <ul>
-    <li><strong>D7:</strong> is it right to prove this from the Mac first and wire it into rocky-pi's body service afterwards?</li>
-    <li><strong>The badge's name on Bluetooth:</strong> the spare currently announces itself with the same name as the face badge. I propose it announces as "RockyTreads" on the drive build so the two are never confused.</li>
-    <li><strong>The screen:</strong> I propose one plain status line on the badge ("Drive: connected, 4.0 / 4.0") and nothing more in this version.</li>
-  </ul>
 
   <h2>How it will be tested</h2>
   <ol>
