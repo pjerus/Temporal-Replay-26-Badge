@@ -50,6 +50,9 @@ enum ScreenId : uint8_t {
   kScreenAssetLibrary,
   kScreenAssetDetail,
   kScreenRobotFace,
+#ifdef BADGE_ENABLE_DRIVE_BLE
+  kScreenDriveStatus,
+#endif
 #ifdef BADGE_HAS_DOOM
   kScreenDoom,
 #endif

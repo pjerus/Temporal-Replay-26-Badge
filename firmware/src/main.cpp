@@ -642,6 +642,18 @@ void loop( ) {
 #ifdef BADGE_ENABLE_DRIVE_BLE
     driveBleTick( (uint8_t)batteryGauge.stateOfChargePercent() );
     if ( driveBleConnected() ) sleepService.caffeine = true;   // stay awake while driven
+    {
+        static bool shown = false;
+        if ( guiManager.isActive() && driveBleConnected() && !shown ) {
+            guiManager.pushScreen( kScreenDriveStatus ); shown = true;
+        } else if ( !driveBleConnected() && shown ) {
+            if ( guiManager.currentScreen()
+                 && guiManager.currentScreen()->id() == kScreenDriveStatus ) {
+                guiManager.popScreen();
+            }
+            shown = false;
+        }
+    }
 #endif
 #endif
 

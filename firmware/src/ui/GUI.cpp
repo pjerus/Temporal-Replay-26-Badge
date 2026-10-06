@@ -32,6 +32,7 @@
 #include "screens/draw/StickerPickerScreen.h"
 #include "screens/draw/AnimDoc.h"
 #include "screens/RobotFaceScreen.h"
+#include "screens/DriveStatusScreen.h"
 #include "emotion/EmotionGlobals.h"
 
 #ifdef BADGE_HAS_DOOM
@@ -422,6 +423,9 @@ static UpdateFirmwareScreen sUpdateFirmware;
 static AssetLibraryScreen sAssetLibrary;
 static AssetDetailScreen sAssetDetail;
 static RobotFaceScreen sRobotFace;
+#ifdef BADGE_ENABLE_DRIVE_BLE
+static DriveStatusScreen sDriveStatus;
+#endif
 #ifdef BADGE_HAS_DOOM
 static DoomScreen sDoom;
 #endif
@@ -660,6 +664,9 @@ void GUIManager::begin(oled* display, Inputs* inputs) {
   registerScreen(&sAssetLibrary);
   registerScreen(&sAssetDetail);
   registerScreen(&sRobotFace);
+#ifdef BADGE_ENABLE_DRIVE_BLE
+  registerScreen(&sDriveStatus);
+#endif
   sRobotFace.bindEmotion(&g_emotion);
 #ifdef BADGE_HAS_DOOM
   registerScreen(&sDoom);
