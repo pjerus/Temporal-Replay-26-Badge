@@ -39,6 +39,7 @@ static const char* TAG = "BadgeIR";
 
 volatile bool    irHardwareEnabled   = false;
 volatile bool    pythonIrListening   = false;
+volatile bool    driveIrWanted       = false;
 IrPythonFrame    irPythonQueue[IR_PYTHON_QUEUE_SIZE] = {};
 volatile int     irPythonQueueHead     = 0;
 volatile int     irPythonQueueTail     = 0;
@@ -787,8 +788,10 @@ int irGetTxPower() { return s_tx_power_percent; }
 // ─── irTask — FreeRTOS Core 0 ───────────────────────────────────────────────
 
 static inline bool irShouldBeActive() {
-    return irHardwareEnabled || pythonIrListening;
+    return irHardwareEnabled || pythonIrListening || driveIrWanted;
 }
+
+bool irHwUp() { return s_hw_up; }
 
 void irTask(void* /*pvParameters*/) {
     Serial.printf("[%s] irTask started on Core 0\n", TAG);

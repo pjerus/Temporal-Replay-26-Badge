@@ -14,6 +14,7 @@
 #include "hardware/Power.h"
 #include "emotion/EmotionGlobals.h"
 #include "emotion/EmotionBleService.h"
+#include "drive/DriveBleService.h"
 #include "infra/Scheduler.h"
 #include "esp32-hal-gpio.h"
 #include "hardware/oled.h"
@@ -495,7 +496,12 @@ extern "C" void initDeferredPeripherals() {
     // before shipping.
     static const uint8_t kEmotionSecret[8] = {
         0x54, 0x45, 0x4d, 0x50, 0x4f, 0x52, 0x41, 0x4c};
+#ifdef BADGE_ENABLE_DRIVE_BLE
+    emotionBleBegin(g_emotion, kEmotionSecret, BADGE_BLE_NAME,
+                    driveBleExtension(kEmotionSecret));
+#else
     emotionBleBegin(g_emotion, kEmotionSecret, BADGE_BLE_NAME);
+#endif
     Serial.println("Emotion BLE service started (deferred)");
 #endif
 
@@ -633,6 +639,10 @@ void loop( ) {
             guiManager.pushScreen( kScreenRobotFace );
         }
     }
+#ifdef BADGE_ENABLE_DRIVE_BLE
+    driveBleTick( (uint8_t)batteryGauge.stateOfChargePercent() );
+    if ( driveBleConnected() ) sleepService.caffeine = true;   // stay awake while driven
+#endif
 #endif
 
     Power::applyLoopPacing( );

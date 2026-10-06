@@ -28,6 +28,7 @@ constexpr size_t kStateLen = 7;
 
 namespace {
 EmotionConsumer* s_consumer = nullptr;
+const EmotionBleExtension* s_ext = nullptr;
 BLECharacteristic* s_stateChar = nullptr;
 uint8_t s_secret[8] = {0};
 uint8_t s_lastBattery = 0;
@@ -73,8 +74,13 @@ void composeState() {
 // with the Arduino BLE API, does not resume on its own. Restart it on
 // disconnect so the badge stays reachable for repeated connections.
 class ServerCb : public BLEServerCallbacks {
+  void onConnect(BLEServer* s) override {
+    (void)s;
+    if (s_ext && s_ext->onConnect) s_ext->onConnect();
+  }
   void onDisconnect(BLEServer* s) override {
     (void)s;
+    if (s_ext && s_ext->onDisconnect) s_ext->onDisconnect();
     BLEDevice::startAdvertising();
   }
 };
@@ -98,8 +104,10 @@ class WriteCb : public BLECharacteristicCallbacks {
 };
 }  // namespace
 
-void emotionBleBegin(EmotionConsumer& consumer, const uint8_t secret[8], const char* advName) {
+void emotionBleBegin(EmotionConsumer& consumer, const uint8_t secret[8],
+                     const char* advName, const EmotionBleExtension* ext) {
   s_consumer = &consumer;
+  s_ext = ext;
   memcpy(s_secret, secret, 8);
 
   BLEDevice::init(advName ? advName : "badge");
@@ -117,6 +125,7 @@ void emotionBleBegin(EmotionConsumer& consumer, const uint8_t secret[8], const c
   s_stateChar->setValue(zero, sizeof(zero));
 
   svc->start();
+  if (s_ext && s_ext->addServices) s_ext->addServices(server);
 
   BLEAdvertising* adv = BLEDevice::getAdvertising();
   adv->addServiceUUID(EMO_SVC_UUID);

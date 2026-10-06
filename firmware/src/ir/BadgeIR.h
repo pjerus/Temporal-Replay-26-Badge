@@ -211,6 +211,10 @@ struct IrPythonFrame {
 };
 
 extern volatile bool      pythonIrListening;
+extern volatile bool      driveIrWanted;   // true while the tread-drive service needs TX
+
+// True once the RMT hardware is initialised and can transmit.
+bool irHwUp();
 extern IrPythonFrame      irPythonQueue[IR_PYTHON_QUEUE_SIZE];
 extern volatile int       irPythonQueueHead;
 extern volatile int       irPythonQueueTail;
