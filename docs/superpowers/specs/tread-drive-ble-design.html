@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tread drive over Bluetooth</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1d1c1a; --muted:#6b675f; --card:#ffffff; --line:#dedad2;
+    --accent:#0b5cad; --ok:#1c6b3c; --warn:#8a5200; --bad:#a3261d;
+    --ble:#5b6fb5; --ir:#c98a1b; --free:#3f9a63; --over:#c4453a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#171614; --fg:#ece8e1; --muted:#9c968b; --card:#211f1c; --line:#38342f;
+      --accent:#7db7ff; --ok:#7fd39f; --warn:#f0b866; --bad:#ff8f84;
+      --ble:#8493d6; --ir:#e2a94a; --free:#6cc48d; --over:#e8695d;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width:920px; margin:0 auto; padding:28px 16px 56px; }
+  h1 { font-size:27px; margin:0 0 4px; }
+  h2 { font-size:20px; margin:38px 0 10px; }
+  h3 { font-size:16px; margin:22px 0 6px; }
+  .meta { color:var(--muted); font-size:14px; }
+  p, li { max-width:72ch; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:14px 0; }
+  .wide { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  code, pre { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13.5px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; }
+  svg { max-width:100%; height:auto; display:block; }
+  svg text { font-family:-apple-system, "Helvetica Neue", Arial, sans-serif; fill:var(--fg); }
+  .note { border-left:3px solid var(--warn); padding:8px 12px; background:var(--card); border-radius:0 8px 8px 0; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+  .measured { color:var(--ok); } .unknown { color:var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tread drive over Bluetooth</h1>
+  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) · status: waiting for Pat's review</div>
+
+  <h2>In one paragraph</h2>
+  <p>The spare badge rides on the tank base with no cable. A computer (the Mac for testing, later rocky-pi) sends it a small Bluetooth message: a speed for the left tread and a speed for the right. The badge turns that into the LEGO infrared signal the base already obeys. If the messages stop for any reason, the base stops. This first version covers the two treads only; motor boards on the I2C port are a later step.</p>
+
+  <h2>What is already proven</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Fact</th><th>How we know</th></tr>
+      <tr><td>The badge drives both treads by infrared, with seven speed steps each</td><td>Driven from the Mac over USB, 6 October</td></tr>
+      <tr><td>Left tread is output A, right is output B, and the right side is reversed</td><td>One-at-a-time tests with Pat watching</td></tr>
+      <tr><td>The left tread needs to run 9% faster to go straight</td><td>Carpet, no load, speed 4</td></tr>
+      <tr><td>The LEGO receiver stops the motors when signals stop</td><td>Seen on every test</td></tr>
+      <tr><td>Bluetooth and send-only infrared run together on one badge</td><td><code>echo-drive</code> build; Pat saw the base move</td></tr>
+    </table>
+  </div>
+
+  <h2>How the pieces connect</h2>
+  <div class="card">
+    <svg viewBox="0 0 860 210" role="img" aria-label="Controller sends Bluetooth to the badge, the badge sends infrared to the LEGO receiver, the receiver powers two motors">
+      <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+      <g fill="var(--card)" stroke="var(--line)" stroke-width="1.5">
+        <rect x="10" y="50" width="170" height="90" rx="10"/>
+        <rect x="290" y="30" width="230" height="130" rx="10"/>
+        <rect x="630" y="50" width="220" height="90" rx="10"/>
+      </g>
+      <text x="95" y="88" text-anchor="middle" font-weight="600" font-size="15">Controller</text>
+      <text x="95" y="110" text-anchor="middle" font-size="13">Mac now, rocky-pi later</text>
+      <text x="405" y="58" text-anchor="middle" font-weight="600" font-size="15">Spare badge (on the base)</text>
+      <text x="405" y="84" text-anchor="middle" font-size="13">1. checks the message</text>
+      <text x="405" y="104" text-anchor="middle" font-size="13">2. applies trim and direction</text>
+      <text x="405" y="124" text-anchor="middle" font-size="13">3. sends infrared every 90 ms</text>
+      <text x="405" y="144" text-anchor="middle" font-size="13">4. stops when messages stop</text>
+      <text x="740" y="88" text-anchor="middle" font-weight="600" font-size="15">LEGO infrared receiver</text>
+      <text x="740" y="110" text-anchor="middle" font-size="13">A: left tread · B: right tread</text>
+      <g stroke="var(--muted)" stroke-width="2" fill="none" marker-end="url(#a)">
+        <path d="M180 95 H288"/><path d="M520 95 H628"/>
+      </g>
+      <text x="234" y="84" text-anchor="middle" font-size="13" fill="var(--ble)">Bluetooth</text>
+      <text x="234" y="116" text-anchor="middle" font-size="12">left, right, time</text>
+      <text x="574" y="84" text-anchor="middle" font-size="13" fill="var(--ir)">infrared</text>
+      <text x="574" y="116" text-anchor="middle" font-size="12">few cm away</text>
+      <path d="M405 160 V186 H95 V142" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#a)"/>
+      <text x="250" y="203" text-anchor="middle" font-size="12">status: what it is doing, battery, free memory</text>
+    </svg>
+  </div>
+
+  <h2>Memory: where it goes and how we avoid running out</h2>
+  <p>The chip has two kinds of memory. The large external memory (8 MB) holds the Python runtime and is not the problem. The small <strong>internal</strong> memory is what Bluetooth and infrared must use, and that is the tight one. The bars below show the internal memory left over after the rest of the firmware has started, which is about 102 KB.</p>
+  <div class="card">
+    <svg viewBox="0 0 860 330" role="img" aria-label="Internal memory budget: Bluetooth 82 KB, infrared sender 10 KB, 9 KB free; adding the infrared receiver would overrun by about 5 KB">
+      <text x="10" y="22" font-size="14" font-weight="600">This design: Bluetooth + infrared sender</text>
+      <rect x="10" y="32" width="645" height="44" fill="var(--ble)"/>
+      <rect x="655" y="32" width="82" height="44" fill="var(--ir)"/>
+      <rect x="737" y="32" width="73" height="44" fill="var(--free)"/>
+      <text x="332" y="60" text-anchor="middle" font-size="14" fill="#fff">Bluetooth · 82 KB</text>
+      <text x="696" y="60" text-anchor="middle" font-size="13" fill="#fff">IR out · 10</text>
+      <text x="773" y="60" text-anchor="middle" font-size="13" fill="#fff">free · 9</text>
+      <!-- safety floor: 6 KB from the right edge = 47 px -->
+      <line x1="763" y1="26" x2="763" y2="84" stroke="var(--bad)" stroke-width="2" stroke-dasharray="4 3"/>
+      <text x="763" y="100" text-anchor="middle" font-size="12" fill="var(--bad)">floor: keep 6 KB free</text>
+      <line x1="810" y1="26" x2="810" y2="290" stroke="var(--fg)" stroke-width="1.5"/>
+      <text x="806" y="116" text-anchor="end" font-size="12">edge of memory, about 102 KB</text>
+
+      <text x="10" y="150" font-size="14" font-weight="600">Not in this design: adding the infrared receiver</text>
+      <rect x="10" y="160" width="645" height="44" fill="var(--ble)"/>
+      <rect x="655" y="160" width="82" height="44" fill="var(--ir)"/>
+      <rect x="737" y="160" width="73" height="44" fill="var(--ir)" opacity="0.65"/>
+      <rect x="810" y="160" width="37" height="44" fill="var(--over)"/>
+      <text x="332" y="188" text-anchor="middle" font-size="14" fill="#fff">Bluetooth · 82 KB</text>
+      <text x="696" y="188" text-anchor="middle" font-size="13" fill="#fff">IR out · 10</text>
+      <text x="792" y="188" text-anchor="middle" font-size="13" fill="#fff">IR in · 14</text>
+      <text x="829" y="224" text-anchor="middle" font-size="12" fill="var(--bad)">over by 5</text>
+
+      <text x="10" y="258" font-size="14" font-weight="600">For comparison: infrared both ways, no Bluetooth (the build used for tuning)</text>
+      <rect x="10" y="268" width="82" height="34" fill="var(--ir)"/>
+      <rect x="92" y="268" width="111" height="34" fill="var(--ir)" opacity="0.65"/>
+      <rect x="203" y="268" width="607" height="34" fill="var(--free)"/>
+      <text x="51" y="290" text-anchor="middle" font-size="12" fill="#fff">out · 10</text>
+      <text x="147" y="290" text-anchor="middle" font-size="12" fill="#fff">in · 14</text>
+      <text x="506" y="290" text-anchor="middle" font-size="13" fill="#fff">free · 77 KB</text>
+    </svg>
+  </div>
+  <div class="card wide">
+    <table>
+      <tr><th>Figure</th><th>Value</th><th>Status</th></tr>
+      <tr><td>Internal memory free before infrared starts, no Bluetooth</td><td>101.6 KB</td><td><span class="tag measured">measured</span></td></tr>
+      <tr><td>Same, with Bluetooth running</td><td>19.7 KB</td><td><span class="tag measured">measured</span></td></tr>
+      <tr><td>Free with Bluetooth and the infrared sender both running</td><td>9.3 KB, largest single piece 7.2 KB</td><td><span class="tag measured">measured</span></td></tr>
+      <tr><td>Infrared receiver's share</td><td>about 14 KB</td><td><span class="tag measured">measured</span> (I said 25 KB earlier; the log shows 14)</td></tr>
+      <tr><td>Extra memory used while a controller is connected</td><td>not known</td><td><span class="tag unknown">not measured</span></td></tr>
+      <tr><td>Extra memory the new drive service needs</td><td>target under 1 KB</td><td><span class="tag unknown">design target</span></td></tr>
+    </table>
+  </div>
+  <h3>The rules that keep us inside the edge</h3>
+  <ol>
+    <li><strong>Nothing new is created while driving.</strong> The drive service sets up everything it needs once at start-up and reuses it. No new background task, no growing lists.</li>
+    <li><strong>The badge reports its own free memory.</strong> The status it sends back includes the free amount now and the lowest it has ever been since power-on. The controller can see trouble coming.</li>
+    <li><strong>A floor of 6 KB.</strong> If free memory is below 6 KB when a controller asks to drive, the badge refuses, stays stopped, and says so in its status.</li>
+    <li><strong>Measure first.</strong> The first build step is to connect a controller and read those two numbers. If connecting alone drops free memory under the floor, the build stops there and I free memory before going on (the candidates are the Wi-Fi start-up attempt and the oversized main stack).</li>
+    <li><strong>Pass mark:</strong> ten minutes of driving with the lowest-ever figure still above 6 KB.</li>
+  </ol>
+  <p class="note">Each figure comes from a single start-up, so treat them as good to a kilobyte or two. The one unknown that matters is the cost of a live connection, and rule 4 settles it before anything else is built.</p>
+
+  <h2>The Bluetooth messages</h2>
+  <p>A second small service sits beside the existing mood service, with the same shape: one place to write commands, one place to read status. It uses the same 8-byte shared secret the mood service uses, so only your own controller can drive.</p>
+  <h3>Drive command (11 bytes, written by the controller)</h3>
+  <div class="card wide">
+    <table>
+      <tr><th>Bytes</th><th>Meaning</th><th>Range</th></tr>
+      <tr><td>0–7</td><td>Shared secret</td><td>must match, or the message is ignored</td></tr>
+      <tr><td>8</td><td>Left tread speed, in tenths</td><td>−70 to 70 (so 43 means speed 4.3); positive is forward</td></tr>
+      <tr><td>9</td><td>Right tread speed, in tenths</td><td>−70 to 70</td></tr>
+      <tr><td>10</td><td>How long this command stays valid, in tenths of a second</td><td>1 to 10 (one second at most)</td></tr>
+    </table>
+  </div>
+  <p>The controller repeats the command about five times a second while it wants the base to move. Speeds of 0 and 0 mean stop now. Anything out of range is ignored and the base is left as it was.</p>
+  <h3>Status (8 bytes, read by the controller)</h3>
+  <div class="card wide">
+    <table>
+      <tr><th>Byte</th><th>Meaning</th></tr>
+      <tr><td>0</td><td>Flags: driving now · infrared ready · refused for low memory · last command rejected</td></tr>
+      <tr><td>1, 2</td><td>Left and right speed currently being sent, in tenths</td></tr>
+      <tr><td>3</td><td>Time left on the current command, tenths of a second</td></tr>
+      <tr><td>4</td><td>Battery percent</td></tr>
+      <tr><td>5</td><td>Free internal memory now, in quarter-kilobytes (36 means 9 KB)</td></tr>
+      <tr><td>6</td><td>Lowest free internal memory since power-on, same unit</td></tr>
+      <tr><td>7</td><td>Count of commands accepted, wrapping at 255</td></tr>
+    </table>
+  </div>
+
+  <h2>Stopping: the safety rule</h2>
+  <p>Same rule as the brick body: <strong>a stop always wins, and silence means stop.</strong> There are three layers, each catching what the one before it misses.</p>
+  <div class="card">
+    <svg viewBox="0 0 860 150" role="img" aria-label="Three stop layers: command expiry on the badge, Bluetooth disconnect on the badge, and the LEGO receiver's own timeout">
+      <g fill="var(--card)" stroke="var(--line)" stroke-width="1.5">
+        <rect x="10" y="20" width="260" height="110" rx="10"/>
+        <rect x="300" y="20" width="260" height="110" rx="10"/>
+        <rect x="590" y="20" width="260" height="110" rx="10"/>
+      </g>
+      <text x="140" y="46" text-anchor="middle" font-weight="600" font-size="14">1. Command runs out</text>
+      <text x="140" y="70" text-anchor="middle" font-size="13">No fresh command within its</text>
+      <text x="140" y="88" text-anchor="middle" font-size="13">valid time (1 s at most):</text>
+      <text x="140" y="106" text-anchor="middle" font-size="13">badge sends stop, then goes quiet</text>
+      <text x="430" y="46" text-anchor="middle" font-weight="600" font-size="14">2. Bluetooth drops</text>
+      <text x="430" y="70" text-anchor="middle" font-size="13">Controller disconnects or goes</text>
+      <text x="430" y="88" text-anchor="middle" font-size="13">out of range: badge stops at once,</text>
+      <text x="430" y="106" text-anchor="middle" font-size="13">without waiting for the timer</text>
+      <text x="720" y="46" text-anchor="middle" font-weight="600" font-size="14">3. Badge itself fails</text>
+      <text x="720" y="70" text-anchor="middle" font-size="13">Crash, flat battery, or knocked</text>
+      <text x="720" y="88" text-anchor="middle" font-size="13">out of aim: the LEGO receiver stops</text>
+      <text x="720" y="106" text-anchor="middle" font-size="13">the motors itself in about a second</text>
+    </svg>
+  </div>
+
+  <h2>What gets built</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Piece</th><th>Where</th><th>Job</th></tr>
+      <tr><td>Tread signal maker</td><td><code>firmware/src/drive/PfTreads.h/.cpp</code></td><td>Turns left and right speeds into LEGO infrared frames: trim, right-side flip, in-between speeds. A straight port of the tuned <code>ir_drive.py</code>; no hardware calls, so it is tested on the Mac.</td></tr>
+      <tr><td>Drive service</td><td><code>firmware/src/drive/DriveBleService.h/.cpp</code></td><td>The Bluetooth command and status, the timer, the stop rules, the memory floor.</td></tr>
+      <tr><td>Hook-up</td><td><code>firmware/src/main.cpp</code></td><td>Start the service after the mood service; call its tick from the main loop.</td></tr>
+      <tr><td>Settings</td><td><code>firmware/settings.txt</code> (via <code>BadgeConfig</code>)</td><td>LEGO channel, left trim, right flip, transmit power. Each has a default equal to today's tuned value.</td></tr>
+      <tr><td>Build variant</td><td><code>[env:echo-drive]</code></td><td>Gains <code>-DBADGE_ENABLE_DRIVE_BLE</code>. Other builds, including the face badge's, are unchanged.</td></tr>
+      <tr><td>Test controller</td><td><code>firmware/scripts/pf_ir/pf_ble_drive.py</code></td><td>Mac-side script: same arguments as <code>pf_drive.py</code>, but over Bluetooth, and it prints the memory figures.</td></tr>
+    </table>
+  </div>
+  <h3>Worked example</h3>
+  <pre>pf_ble_drive.py 4 4 1500        # forward about a foot
+  → writes  [secret] 28 28 0A   five times a second for 1.5 s   (0x28 = 40 tenths)
+  → badge sends left 4.36 (trim applied), right 4, as infrared every 90 ms
+  → after 1.5 s the script writes  [secret] 00 00 01  and reads status:
+     driving=no  battery=98%  free=8.5 KB  lowest=8.0 KB</pre>
+
+  <h2>Decisions</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>#</th><th>Decision</th><th>Why</th></tr>
+      <tr><td>D1</td><td>Drive logic lives in the firmware, not a Python app</td><td>Pat, 6 Oct. Works from power-on; stop rule enforced in one place.</td></tr>
+      <tr><td>D2</td><td>First version is treads only</td><td>Pat, 6 Oct. I2C motor boards cannot be tested until they arrive.</td></tr>
+      <tr><td>D3</td><td>Infrared is send-only on this build</td><td>The receiver does not fit beside Bluetooth (see the memory bars).</td></tr>
+      <tr><td>D4</td><td>Tuning values are settings, not constants in the code</td><td>They change with load and floor; re-tuning should not need a rebuild.</td></tr>
+      <tr><td>D5</td><td>A separate Bluetooth service, not extra fields on the mood service</td><td>The face badge's mood protocol stays untouched; the two can be told apart.</td></tr>
+      <tr><td>D6</td><td>Infrared comes up when a controller connects and goes down when it leaves</td><td>Gives back 10 KB whenever nobody is driving.</td></tr>
+      <tr><td>D7</td><td>rocky-pi integration is a follow-on, not part of this build</td><td>The Mac test script proves the link first. The Pi holding two badges plus the brick at once is unproven and deserves its own test.</td></tr>
+    </table>
+  </div>
+
+  <h2>Open points for Pat</h2>
+  <ul>
+    <li><strong>D7:</strong> is it right to prove this from the Mac first and wire it into rocky-pi's body service afterwards?</li>
+    <li><strong>The badge's name on Bluetooth:</strong> the spare currently announces itself with the same name as the face badge. I propose it announces as "RockyTreads" on the drive build so the two are never confused.</li>
+    <li><strong>The screen:</strong> I propose one plain status line on the badge ("Drive: connected, 4.0 / 4.0") and nothing more in this version.</li>
+  </ul>
+
+  <h2>How it will be tested</h2>
+  <ol>
+    <li>On the Mac, no hardware: the signal maker produces the same frames as the tuned Python script for a table of speeds, including in-between ones.</li>
+    <li>Badge on USB: connect by Bluetooth, read the memory figures (rule 4).</li>
+    <li>Cable unplugged, base on the carpet: forward, back, both spins, and a quarter turn, matching today's results.</li>
+    <li>Stop layers: kill the script mid-move (layer 1), switch the Mac's Bluetooth off mid-move (layer 2), cover the badge's emitter mid-move (layer 3). The base must stop each time within about a second.</li>
+    <li>Ten minutes of mixed driving; lowest free memory stays above 6 KB.</li>
+  </ol>
+
+  <h2>Not in this version</h2>
+  <ul>
+    <li>Motor boards on the I2C port.</li>
+    <li>rocky-pi and the brain driving the base (follow-on, see D7).</li>
+    <li>Listening to the LEGO handheld remote.</li>
+    <li>Distances and angles ("forward 30 cm"). The base has no sensors, so those stay as timing on the controller side.</li>
+    <li>Any change to the face badge or its firmware.</li>
+  </ul>
+</main>
+</body>
+</html>
