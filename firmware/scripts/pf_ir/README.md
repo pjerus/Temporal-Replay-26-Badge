@@ -79,3 +79,15 @@ timed quarter turn, up and down together = stop and exit. It feeds the same stop
 Bluetooth drive, and Bluetooth drive commands are dropped while it is open. The heading shows
 the badge's name (set with `badge.dev("info", "name", "...")`): the spare is "Rocky IR Tread",
 the face badge "Rocky Face". Checked by Pat on the face badge 2026-10-06.
+
+## Syma S107G helicopter
+
+The same raw IR sender flies a Syma S107G indoor helicopter (38 kHz; 2000/2000 us header, 32 bits
+of yaw, pitch, channel + throttle, trim; a frame every 120 ms on channel A). The frame is 34
+pulses, so TX-only builds allow 40 per raw send. From the Mac over USB:
+`s107.py <yaw> <pitch> <throttle> <ms>` (yaw and pitch 0..127 with 63 centred, throttle 0..127).
+On the badge: the HELI menu entry on the drive builds. Up/down buttons step the throttle,
+left/right trim, joystick turns and tilts, up and down together cuts the rotors and exits.
+Settings `hl_chan`, `hl_trim`, `hl_step`. Rotors start near 30% throttle. Proven 2026-10-06 on
+Rocky Face: rotors spin from the script and from the app. Stick and trim directions and real
+flight are untested, and the screen still shows a sent/failed frame counter from that proving.

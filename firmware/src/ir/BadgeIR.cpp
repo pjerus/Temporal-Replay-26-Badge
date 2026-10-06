@@ -90,7 +90,7 @@ static uint8_t           s_nec_last_cmd  = 0;
 #ifdef BADGE_IR_TX_ONLY
 // Send-only build: frames are short (a Power Functions frame is 18 pairs)
 // and each queued request holds a full-size buffer, so keep it small.
-#define IR_RAW_MAX_PAIRS 32U
+#define IR_RAW_MAX_PAIRS 40U
 #else
 #define IR_RAW_MAX_PAIRS 512U
 #endif

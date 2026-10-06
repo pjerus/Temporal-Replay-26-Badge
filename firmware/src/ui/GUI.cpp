@@ -34,6 +34,7 @@
 #include "screens/RobotFaceScreen.h"
 #include "screens/DriveStatusScreen.h"
 #include "screens/TreadDriveScreen.h"
+#include "screens/HeliScreen.h"
 #include "emotion/EmotionGlobals.h"
 
 #ifdef BADGE_HAS_DOOM
@@ -256,6 +257,8 @@ static const GridMenuItem kCuratedMenuItems[] = {
 #ifdef BADGE_ENABLE_DRIVE_BLE
     {"DRIVE", "Steer the tank base with the joystick",
      AppIcons::workflow, kScreenTreadDrive, nullptr, nullptr, nullptr},
+    {"HELI", "Fly the infrared helicopter with the joystick",
+     AppIcons::workflow, kScreenHeli, nullptr, nullptr, nullptr},
 #endif
     // {"HAPTICS",     "Preview vibration strength, frequency, and duration",
     //  AppIcons::workflow,  kScreenHaptics,     nullptr, nullptr, nullptr},
@@ -431,6 +434,7 @@ static RobotFaceScreen sRobotFace;
 #ifdef BADGE_ENABLE_DRIVE_BLE
 static DriveStatusScreen sDriveStatus;
 static TreadDriveScreen sTreadDrive;
+static HeliScreen sHeli;
 #endif
 #ifdef BADGE_HAS_DOOM
 static DoomScreen sDoom;
@@ -673,6 +677,7 @@ void GUIManager::begin(oled* display, Inputs* inputs) {
 #ifdef BADGE_ENABLE_DRIVE_BLE
   registerScreen(&sDriveStatus);
   registerScreen(&sTreadDrive);
+  registerScreen(&sHeli);
 #endif
   sRobotFace.bindEmotion(&g_emotion);
 #ifdef BADGE_HAS_DOOM

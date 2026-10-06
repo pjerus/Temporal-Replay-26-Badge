@@ -143,6 +143,10 @@ enum SettingIndex : uint8_t {
   kTreadTrimPct,     // left tread speed, percent of asked speed
   kTreadFlipRight,   // 1 = right motor faces the other way
   kTreadIrPowerPct,  // IR carrier duty while driving
+  // HELI app (Syma S107G IR helicopter).
+  kHeliChannel,      // 1 = remote channel A, 2 = B
+  kHeliTrim,         // 0..127, 63 centred
+  kHeliThrottleStep, // throttle change per button step, of 127
 #endif
 };
 

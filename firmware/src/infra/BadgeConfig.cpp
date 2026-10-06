@@ -135,6 +135,9 @@ int8_t fontFamilyFromName(const char* name) {
      {"tr_trim",     "Tread Trim %", 109,  50,     200,      1},
      {"tr_flip",     "Tread FlipR",  1,    0,        1,      1},
      {"tr_ir_pw",    "Tread IR %",   50,   1,       50,      1},
+     {"hl_chan",     "Heli Chan",    1,    1,        2,      1},
+     {"hl_trim",     "Heli Trim",    63,   0,      127,      1},
+     {"hl_step",     "Heli Step",    4,    1,       16,      1},
 #endif
 };
   const uint8_t Config::kCount = sizeof(Config::kDefs) / sizeof(Config::kDefs[0]);
@@ -1158,6 +1161,12 @@ int8_t fontFamilyFromName(const char* name) {
       (long)values_[kTreadFlipRight]);
   pos += snprintf(buf + pos, room(), "tr_ir_pw = %ld;       # IR transmit power while driving, 1..50\n",
       (long)values_[kTreadIrPowerPct]);
+  pos += snprintf(buf + pos, room(), "hl_chan  = %ld;       # helicopter remote channel: 1 = A, 2 = B\n",
+      (long)values_[kHeliChannel]);
+  pos += snprintf(buf + pos, room(), "hl_trim  = %ld;       # helicopter trim 0..127, 63 centred\n",
+      (long)values_[kHeliTrim]);
+  pos += snprintf(buf + pos, room(), "hl_step  = %ld;       # throttle change per button step, of 127\n",
+      (long)values_[kHeliThrottleStep]);
 #endif
 
     if (pos >= bufSize) {
