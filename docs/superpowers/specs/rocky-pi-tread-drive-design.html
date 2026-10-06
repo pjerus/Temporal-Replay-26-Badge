@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Driving the treads from rocky-pi</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1d1c1a; --muted:#6b675f; --card:#ffffff; --line:#dedad2;
+    --accent:#0b5cad; --ok:#1c6b3c; --warn:#8a5200; --bad:#a3261d;
+    --ble:#5b6fb5; --ir:#c98a1b; --free:#3f9a63; --over:#c4453a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#171614; --fg:#ece8e1; --muted:#9c968b; --card:#211f1c; --line:#38342f;
+      --accent:#7db7ff; --ok:#7fd39f; --warn:#f0b866; --bad:#ff8f84;
+      --ble:#8493d6; --ir:#e2a94a; --free:#6cc48d; --over:#e8695d;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width:920px; margin:0 auto; padding:28px 16px 56px; }
+  h1 { font-size:27px; margin:0 0 4px; }
+  h2 { font-size:20px; margin:38px 0 10px; }
+  h3 { font-size:16px; margin:22px 0 6px; }
+  .meta { color:var(--muted); font-size:14px; }
+  p, li { max-width:72ch; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:14px 0; }
+  .wide { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  code, pre { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13.5px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; }
+  svg { max-width:100%; height:auto; display:block; }
+  svg text { font-family:-apple-system, "Helvetica Neue", Arial, sans-serif; fill:var(--fg); }
+  .note { border-left:3px solid var(--warn); padding:8px 12px; background:var(--card); border-radius:0 8px 8px 0; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+  .measured { color:var(--ok); } .unknown { color:var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Driving the treads from rocky-pi</h1>
+  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) — first draft for Pat's review · status: awaiting approval · follows on from <a href="tread-drive-ble-design.html">Tread drive over Bluetooth</a> (its decision D7)</div>
+
+  <h2>In one paragraph</h2>
+  <p>Rocky's brain asks the body service on rocky-pi to drive: a left speed, a right speed and a length of time. The body service hands that to a small <em>drive driver</em>. Today's driver passes it to the mood bridge, which already holds the Bluetooth link to each badge, and the badge turns it into infrared for the LEGO receiver. Which badge drives is one setting. A different kind of motor hardware later means a new driver, not a new way of asking.</p>
+
+  <h2>What we are building on</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Fact</th><th>How we know</th></tr>
+      <tr><td>Both badges accept drive commands over Bluetooth and stop when commands stop</td><td>Driven from the Mac on carpet, 6 October; firmware commit <code>b83064a</code></td></tr>
+      <tr><td>The mood bridge runs on rocky-pi (port 8026) and keeps one open Bluetooth link per badge</td><td>Read in <code>pi-arduino-face-emotions</code>: <code>bridge.py</code>, <code>backends.py</code></td></tr>
+      <tr><td>The bridge already handles several badges, each with an address and a secret</td><td><code>EMOTION_BADGES</code> setting in <code>config.py</code></td></tr>
+      <tr><td>A badge takes one Bluetooth connection at a time</td><td>Firmware design; whoever holds the link must carry every kind of message</td></tr>
+      <tr><td>The body service has a key-protected web endpoint, a stop command and a state report, and the brain has a client for it</td><td>Read in <code>rocky-robot</code>: <code>body/service/app.py</code>, <code>rocky/body/client.py</code></td></tr>
+      <tr><td>The drive service uses the same 8-character secret as the mood service</td><td>Firmware: one secret passed to both</td></tr>
+    </table>
+  </div>
+  <p class="note"><span class="tag unknown">not yet proven</span> The body service has never run on rocky-pi (yesterday's hardware bring-up is still pending), and rocky-pi has never held three Bluetooth links at once (two badges and the NXT brick).</p>
+
+  <h2>How a drive command travels</h2>
+  <div class="card">
+  <svg viewBox="0 0 880 300" role="img" aria-label="Flow from Rocky's brain to the treads">
+    <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+    <rect x="10" y="20" width="150" height="70" rx="8" fill="var(--card)" stroke="var(--line)"/>
+    <text x="85" y="50" text-anchor="middle" font-weight="600">Rocky's brain</text>
+    <text x="85" y="70" text-anchor="middle" font-size="12" fill="var(--muted)">the Mac</text>
+
+    <rect x="215" y="10" width="640" height="150" rx="10" fill="none" stroke="var(--line)" stroke-dasharray="5 4"/>
+    <text x="225" y="28" font-size="12" fill="var(--muted)">rocky-pi</text>
+    <rect x="235" y="40" width="170" height="100" rx="8" fill="var(--card)" stroke="var(--accent)"/>
+    <text x="320" y="66" text-anchor="middle" font-weight="600">Body service</text>
+    <text x="320" y="86" text-anchor="middle" font-size="12">POST /drive</text>
+    <text x="320" y="104" text-anchor="middle" font-size="12" fill="var(--muted)">limits, stop, state</text>
+    <rect x="455" y="40" width="150" height="100" rx="8" fill="var(--card)" stroke="var(--accent)"/>
+    <text x="530" y="66" text-anchor="middle" font-weight="600">Drive driver</text>
+    <text x="530" y="86" text-anchor="middle" font-size="12">"badge" today</text>
+    <text x="530" y="104" text-anchor="middle" font-size="12" fill="var(--muted)">motor board later</text>
+    <rect x="655" y="40" width="180" height="100" rx="8" fill="var(--card)" stroke="var(--ble)"/>
+    <text x="745" y="66" text-anchor="middle" font-weight="600">Mood bridge</text>
+    <text x="745" y="86" text-anchor="middle" font-size="12">POST /drive (new)</text>
+    <text x="745" y="104" text-anchor="middle" font-size="12" fill="var(--muted)">resends 5 times a second</text>
+
+    <rect x="655" y="210" width="180" height="70" rx="8" fill="var(--card)" stroke="var(--ble)"/>
+    <text x="745" y="240" text-anchor="middle" font-weight="600">Badge</text>
+    <text x="745" y="260" text-anchor="middle" font-size="12" fill="var(--muted)">spare or face, by a setting</text>
+    <rect x="395" y="210" width="180" height="70" rx="8" fill="var(--card)" stroke="var(--ir)"/>
+    <text x="485" y="240" text-anchor="middle" font-weight="600">LEGO IR receiver</text>
+    <text x="485" y="260" text-anchor="middle" font-size="12" fill="var(--muted)">stops after 1 s of silence</text>
+    <rect x="135" y="210" width="180" height="70" rx="8" fill="var(--card)" stroke="var(--line)"/>
+    <text x="225" y="240" text-anchor="middle" font-weight="600">Two tread motors</text>
+    <text x="225" y="260" text-anchor="middle" font-size="12" fill="var(--muted)">left and right</text>
+
+    <g stroke="var(--muted)" stroke-width="1.6" fill="none" marker-end="url(#a)">
+      <path d="M160 60 H233"/><path d="M405 90 H453"/><path d="M605 90 H653"/>
+      <path d="M745 140 V208"/><path d="M655 245 H577"/><path d="M395 245 H317"/>
+    </g>
+    <text x="197" y="52" text-anchor="middle" font-size="11" fill="var(--muted)">Wi-Fi</text>
+    <text x="629" y="82" text-anchor="middle" font-size="11" fill="var(--muted)">local</text>
+    <text x="752" y="180" font-size="11" fill="var(--muted)">Bluetooth</text>
+    <text x="616" y="237" text-anchor="middle" font-size="11" fill="var(--muted)">infrared</text>
+    <text x="356" y="237" text-anchor="middle" font-size="11" fill="var(--muted)">wires</text>
+  </svg>
+  </div>
+
+  <h2>Decisions</h2>
+  <div class="card wide">
+    <table>
+      <tr><th></th><th>Decision</th><th>Why</th></tr>
+      <tr><td>D1</td><td>The mood bridge carries drive commands, for any badge it knows.</td><td>It already owns the one Bluetooth link each badge allows. The face badge can then show moods and drive on the same link.</td></tr>
+      <tr><td>D2</td><td>The body service gets a general <code>POST /drive</code>, with a swappable driver behind it.</td><td>Pat, 6 October: "we're gonna need that kind of control when we get the driver boards or whatever other solution we come up with". The brain asks the same way whatever moves the treads.</td></tr>
+      <tr><td>D3</td><td>Which badge drives is a setting in the body service (the bridge's name for that badge).</td><td>Pat chose "either, chosen by a setting".</td></tr>
+      <tr><td>D4</td><td>The bridge does the fast resending; the body service sends one request per move.</td><td>The badge needs a fresh command about every 0.2 s. The bridge sits next to the Bluetooth link, so Wi-Fi hiccups between the Mac and the Pi cannot starve it.</td></tr>
+      <tr><td>D5</td><td>Every move has a length, capped at 5 seconds (a setting). A longer drive is several moves.</td><td>A brain that goes quiet cannot leave the base running.</td></tr>
+      <tr><td>D6</td><td>The body service's existing <code>/stop</code> also stops the treads, and a new move replaces the one running.</td><td>One stop for the whole body; a stop always wins.</td></tr>
+      <tr><td>D7</td><td>Driving does not depend on the NXT brick. If the brick is unreachable the treads still work, and the reverse.</td><td>They are separate hardware; one failing should not take the other down.</td></tr>
+      <tr><td>D8</td><td>The brain gets a <code>drive</code> call on its body client and nothing more for now. Teaching Rocky <em>when</em> to drive is a later design.</td><td>Keeps this piece small and testable.</td></tr>
+      <tr><td>D9</td><td>No firmware change.</td><td>The badges already do everything this needs.</td></tr>
+    </table>
+  </div>
+
+  <h3>Approaches considered</h3>
+  <div class="card wide">
+    <table>
+      <tr><th>Approach</th><th>Verdict</th></tr>
+      <tr><td><strong>Bridge carries drive, body service fronts it</strong> (chosen)</td><td>Works for either badge; one more local hop; two projects change.</td></tr>
+      <tr><td>Body service opens its own Bluetooth link to the badge</td><td>Fine for the spare, impossible for the face badge while the bridge holds its link. Fails "either".</td></tr>
+      <tr><td>Brain calls the bridge directly, no body service</td><td>Fewer parts, but the brain would then be tied to badges, which is what D2 avoids.</td></tr>
+    </table>
+  </div>
+
+  <h2>Part 1: the mood bridge (<code>pi-arduino-face-emotions</code>)</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Endpoint</th><th>Body</th><th>Does</th></tr>
+      <tr><td><code>POST /drive</code></td><td><code>target</code>, <code>left</code>, <code>right</code> (−7 to 7, one decimal), <code>ms</code> (100 to 10000)</td><td>Starts a background task that sends the command every 0.2 s with a 0.6 s lifetime until <code>ms</code> is up, then sends a stop. Answers at once. Replaces any move already running for that badge. Both speeds 0 means stop.</td></tr>
+      <tr><td><code>DELETE /drive?target=</code></td><td></td><td>Cancels the running move and sends a stop.</td></tr>
+      <tr><td><code>GET /drive?target=</code></td><td></td><td>Reads the badge's 8-byte drive status: driving, infrared ready, low memory, rejected, speeds, time left, battery, free memory.</td></tr>
+    </table>
+  </div>
+  <ul>
+    <li>Same key check, same per-badge lock and same error answer (502 when the badge is out of reach) as the mood endpoints.</li>
+    <li>The 11-byte command and 8-byte status are built and read by small pure functions, copied in meaning from <code>pf_ble_drive.py</code> and tested without Bluetooth.</li>
+    <li>The three drive addresses (UUIDs) join the mood ones in <code>config.py</code>, each overridable by an environment variable.</li>
+    <li>A badge whose firmware has no drive service answers 502 with a plain message; moods on it are unaffected.</li>
+    <li>The move task ends quietly if the badge drops out; the badge stops by itself within 0.6 s.</li>
+  </ul>
+
+  <h2>Part 2: the body service (<code>rocky-robot</code>)</h2>
+  <pre># ~/.config/rocky-body/settings.toml on rocky-pi
+[drive]
+kind = "badge"                      # "badge", "fake", or leave the section out for no treads
+bridge_url = "http://127.0.0.1:8026"
+target = "tread"                    # the bridge's name for the badge that drives
+max_ms = 5000
+max_speed = 7.0</pre>
+  <p>The bridge's key comes from the environment (<code>ROCKY_DRIVE_BRIDGE_KEY</code>), never from the settings file.</p>
+  <div class="card wide">
+    <table>
+      <tr><th>Piece</th><th>What it does</th></tr>
+      <tr><td><code>body/service/drive.py</code></td><td>The driver shape (<code>drive(left, right, ms)</code>, <code>stop()</code>, <code>state()</code>), a <code>BadgeDrive</code> that calls the bridge, and a <code>FakeDrive</code> for tests and for running without hardware.</td></tr>
+      <tr><td><code>settings.py</code></td><td>Reads and checks the <code>[drive]</code> section.</td></tr>
+      <tr><td><code>app.py</code></td><td><code>POST /drive</code>; <code>/stop</code> stops treads as well as joints; <code>/state</code> gains a <code>drive</code> part. No <code>[drive]</code> section means <code>/drive</code> answers 404 "this body has no treads".</td></tr>
+      <tr><td><code>rocky/body/client.py</code></td><td><code>await body.drive(left, right, ms)</code>.</td></tr>
+    </table>
+  </div>
+
+  <h3>Worked example</h3>
+  <pre># forward at speed 4 for one and a half seconds (about a foot on carpet)
+POST http://rocky-pi.local:8027/drive
+Authorization: Bearer &lt;body key&gt;
+{"left": 4, "right": 4, "ms": 1500}
+→ 200 {"ok": true}
+
+# quarter turn to the right
+{"left": 4, "right": -4, "ms": 500}
+
+# what the state report adds
+GET /state → { ..., "drive": {"kind": "badge", "target": "tread", "reachable": true,
+                               "driving": false, "left": 0, "right": 0, "battery_pct": 0} }</pre>
+  <div class="card wide">
+    <table>
+      <tr><th>Asked for</th><th>Answer</th></tr>
+      <tr><td>Speed beyond <code>max_speed</code>, <code>ms</code> beyond <code>max_ms</code>, or not a number</td><td>422, nothing sent</td></tr>
+      <tr><td>Badge or bridge out of reach</td><td>503 "treads unreachable"</td></tr>
+      <tr><td>Badge refused (low memory, or its own Drive app is open)</td><td>409 with the reason</td></tr>
+      <tr><td>No <code>[drive]</code> section</td><td>404</td></tr>
+    </table>
+  </div>
+
+  <h2>What stops the base</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>If this goes wrong</th><th>The base stops because</th><th>Within</th></tr>
+      <tr><td>The brain goes quiet mid-move</td><td>Every move has an end; the bridge sends a stop then</td><td>the move's own length, at most 5 s</td></tr>
+      <tr><td>The body service crashes</td><td>Same: the bridge finishes the move and stops</td><td>at most 5 s</td></tr>
+      <tr><td>The bridge crashes or the Pi loses power</td><td>The badge's command lifetime runs out</td><td>0.6 s</td></tr>
+      <tr><td>Bluetooth drops</td><td>The badge stops on disconnect</td><td>at once</td></tr>
+      <tr><td>The badge dies or is blocked from the receiver</td><td>The LEGO receiver's own timeout</td><td>about 1 s</td></tr>
+      <tr><td>Anyone calls <code>/stop</code></td><td>The move is cancelled and a stop is sent</td><td>about 0.1 s</td></tr>
+    </table>
+  </div>
+
+  <h2>Security</h2>
+  <ul>
+    <li>Both endpoints keep their existing key checks. The body service's port is open to the home network, as it is today; the bridge stays reachable only from rocky-pi itself for this path.</li>
+    <li>This adds a way to make a physical thing move from the network, so the limits (speed, length) are enforced in the body service, not trusted from the caller.</li>
+    <li><span class="tag unknown">known gap</span> The badge's 8-character secret is fixed in the firmware source and sent unencrypted over Bluetooth. It now guards motion. Fixing it (a per-badge secret and an encrypted link) is a separate piece of work and is not part of this design.</li>
+  </ul>
+
+  <h2>Testing</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Stage</th><th>What</th><th>Needs Pat</th></tr>
+      <tr><td>1</td><td>Unit tests on the Mac: command and status functions; bridge endpoints against a pretend badge (resend pacing, replace, cancel, stop at the end, badge dropping out); body service against a pretend bridge (limits, errors, stop, state); the brain's client.</td><td>No</td></tr>
+      <tr><td>2</td><td>The whole chain on the Mac: bridge and body service both running here, real badge, treads off the desk, then on carpet.</td><td>Yes, watching</td></tr>
+      <tr><td>3</td><td>On rocky-pi: update the bridge, install the body service, add the spare to the bridge's badge list, drive from the Mac through the Pi.</td><td>Yes; changes a running service on the Pi</td></tr>
+      <tr><td>4</td><td>Three links at once: face badge showing moods, spare driving, NXT brick connected. Ten minutes.</td><td>Yes</td></tr>
+    </table>
+  </div>
+
+  <h2>Open points</h2>
+  <ul>
+    <li><strong>Each badge's Bluetooth address as rocky-pi sees it.</strong> Found by a scan on the Pi at stage 3; it is not the same as the USB hardware address.</li>
+    <li><strong>Battery percent reads 0</strong> in the badge's drive status. Reported as-is for now.</li>
+    <li><strong>The face badge as the driver</strong> needs its top edge to see the receiver. A mounting question, not a software one.</li>
+    <li><strong>Named moves</strong> ("forward a foot", "quarter turn left"), like the arm's named poses, would suit Rocky's brain. Left for the design that teaches Rocky when to drive.</li>
+  </ul>
+</main>
+</body>
+</html>
