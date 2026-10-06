@@ -98,4 +98,30 @@ class Core {
   uint32_t startMs_ = 0, ttlMs_ = 0, lastSendMs_ = 0;
 };
 
+// When the drive service may ask for the IR hardware. IR stays wanted for
+// kHoldMs after the last need so the final stop frame is sent, and is not
+// asked for again within kLockoutMs of a release, so the IR task's teardown
+// has finished before anything touches the hardware again.
+class IrLease {
+ public:
+  static constexpr uint32_t kHoldMs = 300;
+  static constexpr uint32_t kLockoutMs = 300;
+
+  bool want(bool need, uint32_t nowMs) {
+    if (need) {
+      if (!held_ && released_ && (uint32_t)(nowMs - releasedMs_) < kLockoutMs) return false;
+      held_ = true; lastNeedMs_ = nowMs;
+      return true;
+    }
+    if (!held_) return false;
+    if ((uint32_t)(nowMs - lastNeedMs_) < kHoldMs) return true;
+    held_ = false; released_ = true; releasedMs_ = nowMs;
+    return false;
+  }
+
+ private:
+  bool held_ = false, released_ = false;
+  uint32_t lastNeedMs_ = 0, releasedMs_ = 0;
+};
+
 }  // namespace drive

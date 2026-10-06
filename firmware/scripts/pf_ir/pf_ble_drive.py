@@ -22,6 +22,11 @@ def build_cmd(secret: bytes, left: float, right: float, ttl_ds: int) -> bytes:
     return secret + struct.pack("<bbB", lt, rt, ttl_ds)
 
 
+def next_sleep(remaining_s: float) -> float:
+    """How long to wait before the next resend without running past the step's end."""
+    return max(0.0, min(RESEND_S, remaining_s))
+
+
 def parse_state(b: bytes) -> dict:
     if len(b) != 8:
         raise ValueError("state must be 8 bytes")
@@ -47,10 +52,13 @@ async def run(steps, status_only):
             return
         try:
             for left, right, ms in steps:
-                end = asyncio.get_running_loop().time() + ms / 1000
-                while asyncio.get_running_loop().time() < end:
+                now = asyncio.get_running_loop().time
+                end = now() + ms / 1000
+                while now() < end:
                     await c.write_gatt_char(WRITE_UUID, build_cmd(secret, left, right, TTL_DS), response=True)
-                    await asyncio.sleep(RESEND_S)
+                    await asyncio.sleep(next_sleep(end - now()))
+                if left or right:                      # end the step on time, not when the ttl runs out
+                    await c.write_gatt_char(WRITE_UUID, build_cmd(secret, 0, 0, 1), response=True)
                 print("did", left, right, ms)
         finally:
             await c.write_gatt_char(WRITE_UUID, build_cmd(secret, 0, 0, 1), response=True)

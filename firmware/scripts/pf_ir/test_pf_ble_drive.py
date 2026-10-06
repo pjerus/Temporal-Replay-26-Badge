@@ -1,5 +1,5 @@
 import pytest
-from pf_ble_drive import build_cmd, parse_state
+from pf_ble_drive import build_cmd, parse_state, next_sleep
 
 S = b"ABCDEFGH"
 
@@ -25,3 +25,7 @@ def test_parse_state():
 def test_parse_state_wrong_length():
     with pytest.raises(ValueError):
         parse_state(b"\x00" * 7)
+def test_next_sleep_never_overruns_the_step():
+    assert next_sleep(1.0) == 0.2
+    assert next_sleep(0.05) == pytest.approx(0.05)
+    assert next_sleep(-0.1) == 0

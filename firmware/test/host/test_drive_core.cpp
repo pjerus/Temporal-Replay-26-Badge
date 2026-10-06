@@ -85,5 +85,22 @@ int main() {
     assert(st[3] == 6); assert(st[4] == 87); assert(st[5] == 36 && st[6] == 32); assert(st[7] == 1);
     c.composeState(st, 400, false, 87, 400000, 400000); assert(st[5] == 255 && st[6] == 255);
   }
+  { // stale command: lifetime runs from arrival, so one applied late never drives
+    Core c; cmd(c, 40, 40, 6, 0);
+    for (uint32_t t = 1000; t < 1500; t += 5) { Out o = c.tick(t, ROOMY);
+      if (o.send) assert(o.leftTenths == 0 && o.rightTenths == 0); }
+    assert(!c.driving());
+  }
+  { // IrLease: hold after last need, then a lockout before IR may be asked for again
+    IrLease l;
+    assert(l.want(true, 0));
+    assert(l.want(false, 100));                    // held so the stop burst gets out
+    assert(l.want(false, IrLease::kHoldMs - 1));
+    assert(!l.want(false, IrLease::kHoldMs));      // released here
+    assert(!l.want(true, IrLease::kHoldMs + 10));  // teardown may be running
+    assert(l.want(true, IrLease::kHoldMs + IrLease::kLockoutMs));
+    IrLease w; const uint32_t near = 0xFFFFFFF0u;  // wrap-safe
+    assert(w.want(true, near)); assert(w.want(false, near + 100)); assert(!w.want(false, near + IrLease::kHoldMs));
+  }
   std::puts("drive_core ok");
 }

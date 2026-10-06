@@ -18,6 +18,7 @@
 
 namespace {
 drive::Core s_core;
+drive::IrLease s_lease;
 pftreads::Dither s_dither;
 BLECharacteristic* s_stateChar = nullptr;
 uint8_t s_secret[8] = {0};
@@ -27,6 +28,7 @@ uint8_t s_secret[8] = {0};
 portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 uint8_t s_pending[drive::kCmdLen];
 uint8_t s_pendingLen = 0;       // 0 = nothing; 0xFF = malformed write
+uint32_t s_pendingMs = 0;       // when the write arrived; its lifetime runs from here
 bool s_connected = false;
 bool s_dropPending = false;
 uint32_t s_lastStateMs = 0;
@@ -42,6 +44,7 @@ class WriteCb : public BLECharacteristicCallbacks {
     } else {
       s_pendingLen = 0xFF;
     }
+    s_pendingMs = millis();
     portEXIT_CRITICAL(&s_mux);
   }
 };
@@ -58,8 +61,18 @@ void addServices(BLEServer* server) {
   s_stateChar->setValue(zero, sizeof(zero));
   svc->start();
 }
-void onConnect() { s_connected = true; }
-void onDisconnect() { s_connected = false; s_dropPending = true; }
+void onConnect() {
+  portENTER_CRITICAL(&s_mux);
+  s_connected = true;
+  portEXIT_CRITICAL(&s_mux);
+}
+void onDisconnect() {
+  portENTER_CRITICAL(&s_mux);
+  s_connected = false;
+  s_dropPending = true;
+  s_pendingLen = 0;   // a command from a controller that has gone is void
+  portEXIT_CRITICAL(&s_mux);
+}
 
 const EmotionBleExtension s_ext = {addServices, onConnect, onDisconnect};
 
@@ -82,29 +95,36 @@ void driveBleTick(uint8_t batteryPct) {
 
   uint8_t buf[drive::kCmdLen];
   uint8_t len;
-  bool dropped;
+  uint32_t arrivedMs;
+  bool dropped, connected;
   portENTER_CRITICAL(&s_mux);
   len = s_pendingLen; s_pendingLen = 0;
+  arrivedMs = s_pendingMs;
   if (len == drive::kCmdLen) memcpy(buf, s_pending, drive::kCmdLen);
   dropped = s_dropPending; s_dropPending = false;
+  connected = s_connected;
   portEXIT_CRITICAL(&s_mux);
 
+  // A command's lifetime runs from when it arrived, not from when this
+  // loop got to it. A disconnect is applied last, so the stop wins.
+  if (len == drive::kCmdLen) s_core.onWrite(buf, len, s_secret, arrivedMs);
+  else if (len == 0xFF) s_core.onWrite(nullptr, 0, s_secret, arrivedMs);
   if (dropped) s_core.onDisconnect();
-  if (len == drive::kCmdLen) s_core.onWrite(buf, len, s_secret, now);
-  else if (len == 0xFF) s_core.onWrite(nullptr, 0, s_secret, now);
 
   // Infrared is up while a controller is connected, and stays up until
-  // the stop burst after a disconnect has gone out.
-  const bool wantIr = s_connected || !s_core.burstDone();
+  // the stop burst after a disconnect has gone out (see IrLease).
+  const bool wantIr = s_lease.want(connected || !s_core.burstDone(), now);
   if (wantIr && !driveIrWanted) {
-    irSetTxPower((int)badgeConfig.get(kTreadIrPowerPct));
+    // Hardware is down here (the lease's lockout outlasts its teardown),
+    // so this only stores the power for the coming init.
+    if (!irHwIsUp()) irSetTxPower((int)badgeConfig.get(kTreadIrPowerPct));
     s_dither.reset();
   }
   driveIrWanted = wantIr;
 
   const uint32_t freeBytes = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
   const drive::Out o = s_core.tick(now, freeBytes);
-  if (o.send && irHwUp()) {
+  if (o.send && wantIr && irHwIsUp()) {
     if (irGetMode() != IR_MODE_RAW_SYMBOL) irSetMode(IR_MODE_RAW_SYMBOL);
     int l, r;
     s_dither.next(o.leftTenths, o.rightTenths, tuning(), l, r);
@@ -116,14 +136,14 @@ void driveBleTick(uint8_t batteryPct) {
   if (s_stateChar && (o.send || now - s_lastStateMs >= 250)) {
     s_lastStateMs = now;
     uint8_t st[drive::kStateLen];
-    s_core.composeState(st, now, irHwUp(), batteryPct, freeBytes,
+    s_core.composeState(st, now, irHwIsUp(), batteryPct, freeBytes,
                         heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL));
     s_stateChar->setValue(st, sizeof(st));
   }
 }
 
 void driveBleStatusLine(char* buf, size_t n) {
-  if (!s_connected) { snprintf(buf, n, "Drive: waiting"); return; }
+  if (!driveBleConnected()) { snprintf(buf, n, "Drive: waiting"); return; }
   snprintf(buf, n, "Drive: %s", s_core.driving() ? "moving" : "connected");
 }
 #endif  // BADGE_ENABLE_DRIVE_BLE

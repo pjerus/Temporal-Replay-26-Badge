@@ -87,7 +87,13 @@ static uint8_t           s_nec_last_cmd  = 0;
 // slot keeps memory bounded and matches Python's "consume promptly"
 // expectation. Stored as packed mark/space uint16 pairs — exactly what
 // the public C API surfaces to MicroPython.
+#ifdef BADGE_IR_TX_ONLY
+// Send-only build: frames are short (a Power Functions frame is 18 pairs)
+// and each queued request holds a full-size buffer, so keep it small.
+#define IR_RAW_MAX_PAIRS 32U
+#else
 #define IR_RAW_MAX_PAIRS 512U
+#endif
 struct IrRawRxFrame {
     uint16_t pairs[IR_RAW_MAX_PAIRS * 2U];  // [mark0, space0, mark1, space1, ...]
     size_t   pair_count;
@@ -790,8 +796,6 @@ int irGetTxPower() { return s_tx_power_percent; }
 static inline bool irShouldBeActive() {
     return irHardwareEnabled || pythonIrListening || driveIrWanted;
 }
-
-bool irHwUp() { return s_hw_up; }
 
 void irTask(void* /*pvParameters*/) {
     Serial.printf("[%s] irTask started on Core 0\n", TAG);
