@@ -38,3 +38,8 @@ when frames stop.
 Measured 2026-10-06 on Pat's base, treads off the ground: output A is the left tread, B the right;
 the right side is flipped in `ir_drive.py` because the two motors face opposite ways; speed 3 is
 the slowest that turns both treads (at 2 the left one stalls). Not yet tested on the floor.
+
+Floor results, 2026-10-06 (carpet, no load on the platform, speed 4): about one foot in 1.5 s; the left tread runs
+slower, corrected by `LEFT_TRIM = 1.09` in `ir_drive.py` (straight forward and in reverse);
+a spin at 4 / -4 turns about 180 degrees per second, so 500 ms is a quarter turn. Fractional
+speeds alternate between the two nearest steps frame by frame.
