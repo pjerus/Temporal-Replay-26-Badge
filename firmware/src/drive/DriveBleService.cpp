@@ -33,6 +33,10 @@ bool s_connected = false;
 bool s_dropPending = false;
 uint32_t s_lastStateMs = 0;
 
+// Set from the main loop only (the Drive app's screen), so no lock.
+bool s_localActive = false, s_localEnded = false;
+int8_t s_localLeft = 0, s_localRight = 0;
+
 class WriteCb : public BLECharacteristicCallbacks {
   void onWrite(BLECharacteristic* c) override {
     const uint8_t* data = c->getData();
@@ -90,6 +94,15 @@ const EmotionBleExtension* driveBleExtension(const uint8_t secret[8]) {
 
 bool driveBleConnected() { return s_connected; }
 
+bool driveLocalActive() { return s_localActive; }
+
+void driveLocalSet(bool active, int8_t leftTenths, int8_t rightTenths) {
+  if (s_localActive && !active) s_localEnded = true;
+  s_localActive = active;
+  s_localLeft = leftTenths;
+  s_localRight = rightTenths;
+}
+
 void driveBleTick(uint8_t batteryPct) {
   const uint32_t now = millis();
 
@@ -107,13 +120,22 @@ void driveBleTick(uint8_t batteryPct) {
 
   // A command's lifetime runs from when it arrived, not from when this
   // loop got to it. A disconnect is applied last, so the stop wins.
-  if (len == drive::kCmdLen) s_core.onWrite(buf, len, s_secret, arrivedMs);
-  else if (len == 0xFF) s_core.onWrite(nullptr, 0, s_secret, arrivedMs);
-  if (dropped) s_core.onDisconnect();
+  if (s_localActive) {
+    // The Drive app owns the treads: its speeds go in as a short-lived
+    // command each pass, so a frozen app stops the base within 0.3 s.
+    memcpy(buf, s_secret, 8);
+    buf[8] = (uint8_t)s_localLeft; buf[9] = (uint8_t)s_localRight; buf[10] = 3;
+    s_core.onWrite(buf, drive::kCmdLen, s_secret, now);
+  } else {
+    if (len == drive::kCmdLen) s_core.onWrite(buf, len, s_secret, arrivedMs);
+    else if (len == 0xFF) s_core.onWrite(nullptr, 0, s_secret, arrivedMs);
+  }
+  if (dropped || s_localEnded) s_core.onDisconnect();
+  s_localEnded = false;
 
   // Infrared is up while a controller is connected, and stays up until
   // the stop burst after a disconnect has gone out (see IrLease).
-  const bool wantIr = s_lease.want(connected || !s_core.burstDone(), now);
+  const bool wantIr = s_lease.want(connected || s_localActive || !s_core.burstDone(), now);
   if (wantIr && !driveIrWanted) {
     // Hardware is down here (the lease's lockout outlasts its teardown),
     // so this only stores the power for the coming init.

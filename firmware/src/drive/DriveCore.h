@@ -30,10 +30,13 @@ class Core {
     if (l < -70 || l > 70 || r < -70 || r > 70 || ttl < 1 || ttl > 10) { rejected_ = true; return; }
     rejected_ = false;
     accepted_++;
-    if (l == 0 && r == 0) { stop(); return; }
+    if (l == 0 && r == 0) { if (driving_) stop(); return; }
+    // Only a start from rest sends at once; a resend or a speed change rides
+    // the next 90 ms frame, so a chatty controller cannot flood the IR queue.
+    if (!driving_) fresh_ = true;
     left_ = l; right_ = r;
     startMs_ = nowMs; ttlMs_ = (uint32_t)ttl * 100;
-    driving_ = true; fresh_ = true; stopsLeft_ = 0;
+    driving_ = true; stopsLeft_ = 0;
   }
 
   void onDisconnect() { if (driving_ || stopsLeft_ == 0) stop(); }

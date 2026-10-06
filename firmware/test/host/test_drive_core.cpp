@@ -85,6 +85,17 @@ int main() {
     assert(st[3] == 6); assert(st[4] == 87); assert(st[5] == 36 && st[6] == 32); assert(st[7] == 1);
     c.composeState(st, 400, false, 87, 400000, 400000); assert(st[5] == 255 && st[6] == 255);
   }
+  { // a controller resending many times a second does not add frames
+    Core c; int n = 0;
+    for (uint32_t t = 0; t < 900; t += 5) { if (t % 20 == 0) cmd(c, 40, 40, 6, t); if (c.tick(t, ROOMY).send) n++; }
+    assert(n == 10);                                   // 0,90,...,810
+  }
+  { // repeated stop while already stopped sends nothing more after the first burst
+    Core c; cmd(c, 40, 40, 6, 0); c.tick(0, ROOMY); cmd(c, 0, 0, 1, 10);
+    int n = 0;
+    for (uint32_t t = 10; t < 2000; t += 5) { cmd(c, 0, 0, 1, t); if (c.tick(t, ROOMY).send) n++; }
+    assert(n == kStopFrames);
+  }
   { // stale command: lifetime runs from arrival, so one applied late never drives
     Core c; cmd(c, 40, 40, 6, 0);
     for (uint32_t t = 1000; t < 1500; t += 5) { Out o = c.tick(t, ROOMY);

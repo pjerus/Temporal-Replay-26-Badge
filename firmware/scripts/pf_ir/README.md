@@ -70,3 +70,12 @@ unchanged). To drive the face badge set `ROCKY_TREAD_NAME=TemporalBadge`.
 
 `badge.dev("info")` over the USB REPL reads name|title|company; `badge.dev("info", "name", "")`
 sets one field. Both badges were blanked this way.
+
+## Drive app on the badge
+
+Both drive builds have a DRIVE entry on the main menu: joystick steers (gentle push slow, full
+push full speed), up/down buttons held = full speed forward/reverse, left/right buttons = a
+timed quarter turn, up and down together = stop and exit. It feeds the same stop logic as the
+Bluetooth drive, and Bluetooth drive commands are dropped while it is open. The heading shows
+the badge's name (set with `badge.dev("info", "name", "...")`): the spare is "Rocky IR Tread",
+the face badge "Rocky Face". Checked by Pat on the face badge 2026-10-06.
