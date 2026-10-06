@@ -43,3 +43,17 @@ Floor results, 2026-10-06 (carpet, no load on the platform, speed 4): about one 
 slower, corrected by `LEFT_TRIM = 1.09` in `ir_drive.py` (straight forward and in reverse);
 a spin at 4 / -4 turns about 180 degrees per second, so 500 ms is a quarter turn. Fractional
 speeds alternate between the two nearest steps frame by frame.
+
+## Driving over Bluetooth (no cable)
+
+Needs the badge on the `echo-drive` firmware. Set `ROCKY_TREAD_SECRET` to the badge's 8-character
+shared secret first (it is the emotion channel's secret; do not put it in a file here).
+
+    uv run --with bleak pf_ble_drive.py --status          # connect, print status and memory
+    uv run --with bleak pf_ble_drive.py 4 4 1500          # forward, speed 4, 1.5 s
+
+The script resends the command five times a second; each is valid for 0.6 s. If the script dies or
+Bluetooth drops, the badge sends a stop and goes quiet, and the LEGO receiver stops by itself too.
+Trim, right-side flip, channel and IR power are `tr_*` lines in the badge's `settings.txt`.
+Status prints free internal memory now and the lowest since power-on; the badge refuses to drive
+below 6 KB.
