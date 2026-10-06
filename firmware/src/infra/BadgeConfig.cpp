@@ -129,6 +129,13 @@ int8_t fontFamilyFromName(const char* name) {
      // 1 = MicroPython /apps/credits.py. Default 0 because the
      // native path has no Python warm-up cost on entry.
      {"creds_py",    "Credits Py",   0,    0,        1,      1},
+
+#ifdef BADGE_ENABLE_DRIVE_BLE
+     {"tr_chan",     "Tread Chan",   1,    1,        4,      1},
+     {"tr_trim",     "Tread Trim %", 109,  50,     200,      1},
+     {"tr_flip",     "Tread FlipR",  1,    0,        1,      1},
+     {"tr_ir_pw",    "Tread IR %",   50,   1,       50,      1},
+#endif
 };
   const uint8_t Config::kCount = sizeof(Config::kDefs) / sizeof(Config::kDefs[0]);
 
@@ -1142,6 +1149,16 @@ int8_t fontFamilyFromName(const char* name) {
       (long)values_[kLogZigmoji]);
   pos += snprintf(buf + pos, room(), "log_imu    = %ld;       # IMU samples, thresholds, and flip transitions\n",
       (long)values_[kLogImu]);
+#ifdef BADGE_ENABLE_DRIVE_BLE
+  pos += snprintf(buf + pos, room(), "\ntr_chan  = %ld;       # LEGO IR channel 1..4\n",
+      (long)values_[kTreadChannel]);
+  pos += snprintf(buf + pos, room(), "tr_trim  = %ld;       # left tread speed, %% of asked (109 = 9%% faster)\n",
+      (long)values_[kTreadTrimPct]);
+  pos += snprintf(buf + pos, room(), "tr_flip  = %ld;       # 1 = right motor faces the other way\n",
+      (long)values_[kTreadFlipRight]);
+  pos += snprintf(buf + pos, room(), "tr_ir_pw = %ld;       # IR transmit power while driving, 1..50\n",
+      (long)values_[kTreadIrPowerPct]);
+#endif
 
     if (pos >= bufSize) {
       Serial.printf("Config: settings file truncated (%d > %u)\n", pos, bufSize);

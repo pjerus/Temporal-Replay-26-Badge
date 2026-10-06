@@ -486,13 +486,16 @@ extern "C" void initDeferredPeripherals() {
     // startup when BADGE_ENABLE_BLE_PROXIMITY is explicitly enabled.
 #endif
 
+#ifndef BADGE_BLE_NAME
+#define BADGE_BLE_NAME "TemporalBadge"
+#endif
 #ifdef BADGE_ENABLE_EMOTION_BLE
     // Emotion channel: minimal BLE GATT peripheral an AI can write to.
     // Dev shared secret ("TEMPORAL"); TODO source from NVS/BadgeConfig
     // before shipping.
     static const uint8_t kEmotionSecret[8] = {
         0x54, 0x45, 0x4d, 0x50, 0x4f, 0x52, 0x41, 0x4c};
-    emotionBleBegin(g_emotion, kEmotionSecret, "TemporalBadge");
+    emotionBleBegin(g_emotion, kEmotionSecret, BADGE_BLE_NAME);
     Serial.println("Emotion BLE service started (deferred)");
 #endif
 

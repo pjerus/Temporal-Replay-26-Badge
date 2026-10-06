@@ -136,6 +136,14 @@ enum SettingIndex : uint8_t {
   // bitmap-walk code can be tweaked without reflashing). Both views
   // render the same headshot blob — see scripts/gen_credit_xbms.py.
   kCreditsUsePython,
+
+#ifdef BADGE_ENABLE_DRIVE_BLE
+  // Tread drive (Power Functions IR). Tuned on Pat's tank base 2026-10-06.
+  kTreadChannel,     // LEGO channel 1..4
+  kTreadTrimPct,     // left tread speed, percent of asked speed
+  kTreadFlipRight,   // 1 = right motor faces the other way
+  kTreadIrPowerPct,  // IR carrier duty while driving
+#endif
 };
 
 extern const uint8_t kFontFamilyCount;
