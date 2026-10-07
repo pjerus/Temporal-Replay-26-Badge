@@ -1071,7 +1071,8 @@ void GUIManager::syncRouteForBadgeState() {
 void GUIManager::applyDisplayPolicy(DisplayPolicy policy) {
   if (!oled_) return;
   if (!displayPolicyApplied_ || displayPolicy_ != policy) {
-    oled_->setFlipped(policy == DisplayPolicy::kNametag);
+    oled_->setFlipped(policy == DisplayPolicy::kNametag &&
+                      badgeConfig.get(kNametagSameWayUp) == 0);
     displayPolicy_ = policy;
     displayPolicyApplied_ = true;
   }

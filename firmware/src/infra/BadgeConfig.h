@@ -70,6 +70,7 @@ enum SettingIndex : uint8_t {
   kFlipDelayMs,
   kFlipButtons,
   kFlipJoystick,
+  kNametagSameWayUp,  // 1 = the name screen is not turned; it reads the same way up as the menus
   kOledOsc,
   kOledDiv,
   kOledMux,

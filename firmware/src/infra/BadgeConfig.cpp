@@ -72,6 +72,7 @@ int8_t fontFamilyFromName(const char* name) {
       {"flip_ms",     "Flip Delay",  0,  0,      30000,  50},
       {"flip_btn",    "Flip Btns",   1,    0,      1,     1},
       {"flip_joy",    "Flip Joy",    1,    0,      1,     1},
+      {"name_flip",   "Name Flip",   0,    0,      1,     1},
       {"oled_osc",    "OLED Osc",    15,    0,     15,     1},
       {"oled_div",    "OLED Div",    1,    1,     16,     1},
       {"oled_mux",    "OLED Mux",   64,   16,     64,     1},
@@ -162,7 +163,7 @@ int8_t fontFamilyFromName(const char* name) {
 
   namespace {
   constexpr const char* kNvsNamespace = "badge_cfg";
-  constexpr uint16_t kSettingsBufSize = 5120;
+  constexpr uint16_t kSettingsBufSize = 6144;
   Preferences gPrefs;
 
   bool isCpuMhzIndex(uint8_t index) {
@@ -1032,8 +1033,10 @@ int8_t fontFamilyFromName(const char* name) {
         (long)values_[kFlipUpThreshold], (long)kDefs[kFlipUpThreshold].minValue, (long)kDefs[kFlipUpThreshold].maxValue);
     pos += snprintf(buf + pos, room(), "flip_dn = %ld;          # %ld..%ld mG threshold to flip\n",
         (long)values_[kFlipDownThreshold], (long)kDefs[kFlipDownThreshold].minValue, (long)kDefs[kFlipDownThreshold].maxValue);
-    pos += snprintf(buf + pos, room(), "flip_ms = %ld;            # %ld..%ld ms hold before flip\n\n",
+    pos += snprintf(buf + pos, room(), "flip_ms = %ld;            # %ld..%ld ms hold before flip\n",
         (long)values_[kFlipDelayMs], (long)kDefs[kFlipDelayMs].minValue, (long)kDefs[kFlipDelayMs].maxValue);
+    pos += snprintf(buf + pos, room(), "name_flip = %ld;          # 1 = name screen reads the same way up as the menus\n\n",
+        (long)values_[kNametagSameWayUp]);
 
     pos += snprintf(buf + pos, room(), "[oled]\n");
     pos += snprintf(buf + pos, room(), "# Display timing (SSD1309) - tune to reduce tearing\n");

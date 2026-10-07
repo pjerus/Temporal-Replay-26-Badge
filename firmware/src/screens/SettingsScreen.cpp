@@ -108,6 +108,7 @@ static const GroupItem kDisplayItems[] = {
     SI(kFlipDelayMs),
     SI(kFlipButtons),
     SI(kFlipJoystick),
+    SI(kNametagSameWayUp),
     SI(kOledContrast),
     SI(kOledOsc),
     SI(kOledDiv),
@@ -234,6 +235,7 @@ static const SettingDesc kSettingDescs[] = {
     {kFlipUpThreshold,    "IMU upright threshold"},
     {kFlipDownThreshold,  "IMU inverted threshold"},
     {kFlipDelayMs,        "Tilt-confirm delay (ms)"},
+    {kNametagSameWayUp,   "Name screen same way up as menus"},
     {kImuSmoothing,       "IMU sample smoothing"},
     {kImuInt1Threshold,   "IMU INT1 motion threshold"},
     {kImuInt1Duration,    "IMU INT1 motion duration"},
@@ -264,6 +266,7 @@ static const uint8_t kUserSettings[] = {
     kHapticStrength,
     kSwapConfirmCancel,
     kAutoFlipEnable,
+    kNametagSameWayUp,
     kJoySensitivity,
     kJoyDeadzone,
     kRptInitialDelayMs,
@@ -287,6 +290,7 @@ static const char* settingLabel(uint8_t ci) {
     case kHapticStrength:    return "Strength";
     case kSwapConfirmCancel: return "Confirm";
     case kAutoFlipEnable:    return "Auto Flip";
+    case kNametagSameWayUp:  return "Name Flip";
     case kJoySensitivity:    return "Joy Sens";
     case kJoyDeadzone:       return "Joy Dead";
     case kRptInitialDelayMs: return "Rpt Delay";
@@ -303,6 +307,7 @@ static void settingValue(uint8_t ci, const Config* cfg, char* out, uint8_t cap) 
   switch (ci) {
     case kHapticEnabled:
     case kAutoFlipEnable:
+    case kNametagSameWayUp:
       std::snprintf(out, cap, "%s", v ? "On" : "Off");
       break;
     case kLightSleepSec:
