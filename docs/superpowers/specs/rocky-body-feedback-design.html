@@ -145,7 +145,7 @@
       <tr><td>D8</td><td>The report carries <code>"schema": 2</code>.</td><td>A reader can tell which shape it has.</td></tr>
       <tr><td>D10</td><td>The body service caps one move at 5 s (<code>[drive] max_ms</code>, adjustable up to the bridge's 10 s).</td><td>Added in the build. A longer drive is a chain of moves, each replacing the last.</td></tr>
       <tr><td>D9</td><td>The bridge, which runs the move, is the one that records how it ended. The body service passes that on and keeps no copy of its own.</td><td>Two records of the same ending would drift apart.</td></tr>
-      <tr><td>D11</td><td>A legs mood that fails to reach the face badge is sent again. How many times, and when to give up because a newer mood has replaced it, is still to be designed in rocky-robot.</td><td>Pat, 7 October, after one of three legs-gone moods was lost to a face badge Bluetooth error: "sure retry".</td></tr>
+      <tr><td>D11</td><td>A face command that fails to reach the face badge is sent again: every 2 s for up to 10 s, and dropped as soon as a newer face is asked for, so a late "scared" cannot land on top of "happy". It covers every face send, not only legs moods. Both times are settings (<code>badge_retry_every_s</code>, <code>badge_retry_for_s</code>).</td><td>Pat, 7 October, after one of three legs-gone moods was lost to a face badge Bluetooth error: "sure retry".</td></tr>
     </table>
   </div>
 
@@ -263,7 +263,7 @@ GET /state
 
   <h2>Open points</h2>
   <ul>
-    <li><strong>A legs mood is lost if the face badge has a Bluetooth error at that moment.</strong> Seen once in three switch-offs on 7 October. Rocky sends each legs mood once and drops it if the send fails. Decided (D11): retry it. Not built yet.</li>
+    <li><strong>A legs mood is lost if the face badge has a Bluetooth error at that moment.</strong> Seen once in three switch-offs on 7 October. Rocky sends each legs mood once and drops it if the send fails. Decided (D11): retry it. Built in rocky-robot on 7 October and tested against a pretend badge; not committed, not yet running in Rocky (his brain needs a restart), and not tried on the base.</li>
     <li><strong>The face moods for legs gone and back have not been confirmed by eye.</strong> They were read from the face badge's state. Rocky's brain reacted to each lost move in the same report that showed it.</li>
     <li><strong>The switch-on delay is still unmeasured.</strong> Skipped on 7 October. To measure it: time from the badge's menu appearing to the treads moving.</li>
     <li><strong>A move sent just as the badge drops took 2.05 s to be turned away.</strong> It was in flight before anything knew the badge was gone, so it is not the "known gone" case, and it is inside the 3 s deadline. What made up the 2.05 s is not known; the Pi's log for 22:42:36 to 22:42:39 BST on 7 October would show it.</li>
