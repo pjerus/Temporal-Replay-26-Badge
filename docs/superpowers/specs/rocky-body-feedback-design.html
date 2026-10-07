@@ -42,10 +42,39 @@
 <body>
 <main>
   <h1>What Rocky's body tells his brain</h1>
-  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) — first draft for Pat's review · status: awaiting approval · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
+  <div class="meta">Started 2026-10-06 · Revision 2 (2026-10-07) — records what the build changed and the results on the base · status: stage 1 built and tested on hardware; not yet pushed · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
 
   <h2>In one paragraph</h2>
   <p>The body service on rocky-pi already answers in JSON, and Rocky's brain already reads it once a second. What it lacks is outcomes. A drive command answers "accepted" and nothing more, and the report mixes what was <em>asked for</em> with what was <em>measured</em>. This design gives every move a number and a stated ending, separates commanded from measured, and puts every sensor reading into one common shape, with empty slots ready for the sensors we have not wired in yet.</p>
+
+  <h2>Revision 2: what the build changed</h2>
+  <p>Stage 1 was built on 6 and 7 October and tested on the tank base. The design held, but the build added six things this page did not have. Each is now reflected in the sections below.</p>
+  <div class="card wide">
+    <table>
+      <tr><th></th><th>Correction</th><th>Why it was needed</th></tr>
+      <tr><td>C1</td><td><strong>Every Bluetooth operation has a deadline</strong>: 3 s for a read or write, 10 s for a connect. Past it the badge counts as unreachable and the link is dropped.</td><td>A badge that is switched off leaves the link half-open: nothing answers and nothing fails. Without a deadline the bridge hung and the move was never marked <code>lost</code>.</td></tr>
+      <tr><td>C2</td><td><strong>A badge known to be gone is answered from memory.</strong> Status requests and new moves come back "unreachable" at once, while one attempt to reach the badge runs behind them.</td><td>Reaching for a missing badge can take as long as a connect. The brain polls once a second and must not wait for that.</td></tr>
+      <tr><td>C3</td><td><strong><code>recent_moves</code></strong>: the report carries the newest 8 moves, newest first, not only <code>last_move</code>. It stays readable while the badge is unreachable.</td><td>A new move overwrites <code>last_move</code>, so a reader that polls slowly could miss how the one before ended.</td></tr>
+      <tr><td>C4</td><td><strong><code>refused</code> is a real ending.</strong> The badge's status carries two flags, <code>low_memory</code> and <code>rejected</code>. A move the badge will not take is numbered, ends <code>refused</code> with that flag as the reason, and the body service answers 409.</td><td>Revision 1 drew "refused" but had no source for it.</td></tr>
+      <tr><td>C5</td><td><strong><code>start_within_ms</code></strong>: the caller says how long it will wait for the move to start. If the badge is not ready by then, the move does not start and gets no number.</td><td>A move must not begin after its caller has given up waiting to hear that it did. A cold connect takes about 2.6 s; the body service waits 1 s.</td></tr>
+      <tr><td>C6</td><td><strong>A move is lost the moment anything finds the badge gone</strong>, and its resend loop is cancelled then.</td><td>Found on the base on 7 October: a status poll noticed the drop at 1.9 s, but only the move's own resend could end the move, and it queued behind the reconnect attempt. The report said "unreachable" and "running" together until 13.5 s.</td></tr>
+    </table>
+  </div>
+
+  <h3>Results on the base, 7 October</h3>
+  <p>Each run chained a slow move every 4 s for a minute while the report was polled about twice a second. Pat switched the tread badge off, and sometimes on again, during the run.</p>
+  <div class="card wide">
+    <table>
+      <tr><th>Run</th><th>Bridge code</th><th>Badge seen gone at</th><th>Move marked lost at</th><th>Result</th></tr>
+      <tr><td>A</td><td>before C6</td><td>1.9 s</td><td>13.5 s</td><td>Late by 11.6 s. No hang; slowest report 1.6 s.</td></tr>
+      <tr><td>B</td><td>before C6</td><td>1.7 s</td><td>1.7 s</td><td>On time: the fault was a race, not constant.</td></tr>
+      <tr><td>1</td><td>with C6</td><td>2.0 s and 47.5 s</td><td>same poll, both times</td><td>Pass. Slowest report 0.5 s.</td></tr>
+      <tr><td>2</td><td>with C6</td><td>19.2 s</td><td>same poll</td><td>Pass. First move after switching back on accepted.</td></tr>
+      <tr><td>3</td><td>with C6</td><td>26.7 s</td><td>same poll</td><td>Pass.</td></tr>
+    </table>
+  </div>
+  <p>Across every run: no report failed, the move history stayed readable while the badge was off, moves sent to a missing badge were refused in about 0.1 s without getting a number, each replaced move ended <code>replaced/new_move</code>, and the badge took a new move once it was back. Finished, stopped and replaced endings had already been checked on the base on 6 October.</p>
+  <p class="note">Because run B came out clean on the old code, the three clean runs do not prove C6 by themselves. The stronger proof is the bridge test that failed before the fix and passes after it. Not yet shown: Rocky's brain hearing that a move was lost. Nothing in the brain reads the tread report yet.</p>
 
   <h2>What is there today</h2>
   <div class="card wide">
@@ -71,6 +100,7 @@
       <tr><td>D6</td><td>Senses we expect but have not wired are listed now, with <code>null</code> values.</td><td>The shape is settled before the hardware arrives; filling one in later changes no interface.</td></tr>
       <tr><td>D7</td><td>The old top-level <code>distance_cm</code>, <code>touch</code> and <code>color</code> stay until the brain reads <code>senses</code>, then go.</td><td>Nothing breaks on the day this ships.</td></tr>
       <tr><td>D8</td><td>The report carries <code>"schema": 2</code>.</td><td>A reader can tell which shape it has.</td></tr>
+      <tr><td>D10</td><td>The body service caps one move at 5 s (<code>[drive] max_ms</code>, adjustable up to the bridge's 10 s).</td><td>Added in the build. A longer drive is a chain of moves, each replacing the last.</td></tr>
       <tr><td>D9</td><td>The bridge, which runs the move, is the one that records how it ended. The body service passes that on and keeps no copy of its own.</td><td>Two records of the same ending would drift apart.</td></tr>
     </table>
   </div>
@@ -94,14 +124,18 @@
       <path d="M360 124 C460 128 480 146 558 146"/><path d="M360 132 C450 140 480 204 558 204"/>
     </g>
     <text x="184" y="112" text-anchor="middle" font-size="11" fill="var(--muted)">accepted</text>
-    <text x="130" y="205" font-size="11" fill="var(--muted)">limits, low memory</text>
+    <text x="130" y="205" font-size="11" fill="var(--muted)">low memory, rejected</text>
   </svg>
   </div>
   <p>"Finished" means the bridge sent every command and the closing stop. It does <strong>not</strong> mean the base moved. Whether it moved is a question for <code>senses.motion</code>, which is empty until a sensor fills it.</p>
+  <p>A refused move was accepted by the bridge, numbered, and then turned down by the badge. Three things are <em>not</em> moves and get no number: a request outside the limits (422), a move for a badge that cannot be reached (503), and a move the badge was not ready for within <code>start_within_ms</code> (503). A move becomes <code>lost</code> as soon as anything, a status read included, finds the badge gone (C6).</p>
 
   <h2>The new shape</h2>
   <pre>POST /drive  {"left": 4, "right": 4, "ms": 1500}
 → 200 {"ok": true, "move": {"id": 17}}
+→ 409 {"error": "the badge is low on memory", "move": {"id": 17}}   // refused by the badge
+→ 503 {"error": "treads unreachable"}                               // not a move, no number
+→ 422 {"detail": "ms must be from 100 to 5000"}                     // not a move, no number
 
 GET /state
 {
@@ -119,7 +153,9 @@ GET /state
       "result": "running",                 // running | finished | replaced | stopped | lost | refused
       "ended_by": null,                    // time | new_move | stop | unreachable | &lt;refusal reason&gt;
       "age_ms": 700                        // since it started, or since it ended
-    }
+    },
+    "recent_moves": [ { "id": 17, ... }, { "id": 16, "result": "replaced", "ended_by": "new_move", ... } ]
+                                           // newest first, at most 8; the first is last_move
   },
 
   "senses": {
@@ -143,6 +179,9 @@ GET /state
     <li>New senses may appear at any time. A reader ignores names it does not know.</li>
     <li><code>drive.commanded</code> is zero whenever no move is running.</li>
     <li><code>last_move</code> is <code>null</code> until the first move after the service starts. Move numbers count up from 1 and start again when the bridge restarts; <code>age_ms</code> tells an old move from a new one.</li>
+    <li><code>recent_moves</code> and <code>last_move</code> are the bridge's own record, so they are still reported while <code>drive.reachable</code> is false.</li>
+    <li>When <code>drive.reachable</code> turns false, a move that was running is already <code>lost</code> in that same report.</li>
+    <li>The first move after the badge comes back may be turned away as not ready (a connect takes about 2.6 s, the wait is 1 s). It gets no number; send it again.</li>
     <li>With no <code>[drive]</code> section, <code>drive</code> is <code>null</code>, as today.</li>
   </ul>
 
@@ -150,8 +189,8 @@ GET /state
   <div class="card wide">
     <table>
       <tr><th>Project</th><th>Change</th></tr>
-      <tr><td>Mood bridge</td><td>The move task records its number, what was asked, and how it ended. <code>POST /drive</code> returns the number; <code>GET /drive</code> and <code>DELETE /drive</code> include <code>last_move</code>. The number is the bridge's own counter per badge.</td></tr>
-      <tr><td>Body service</td><td><code>POST /drive</code> passes the number back. <code>/state</code> builds <code>drive.commanded</code>, <code>drive.last_move</code> and the <code>senses</code> block; a refusal it makes itself (limits) is not a move and gets no number.</td></tr>
+      <tr><td>Mood bridge</td><td>The move task records its number, what was asked, and how it ended. <code>POST /drive</code> returns the number; <code>GET /drive</code> and <code>DELETE /drive</code> include <code>last_move</code> and <code>recent_moves</code>. The number is the bridge's own counter per badge. Bluetooth deadlines, the memory of a badge that is gone, and <code>start_within_ms</code> live here too (C1, C2, C5, C6).</td></tr>
+      <tr><td>Body service</td><td><code>POST /drive</code> passes the number back. <code>/state</code> builds <code>drive.commanded</code>, <code>drive.last_move</code> and the <code>senses</code> block; a refusal it makes itself (limits) is not a move and gets no number. It sends <code>start_within_ms</code> with every move and answers 409 when the badge refuses one.</td></tr>
       <tr><td>Rocky's brain</td><td><code>body.drive()</code> returns the move number. <code>BodySense</code> reads <code>senses</code> in place of the old keys. Nothing yet acts on the treads.</td></tr>
       <tr><td>Badge firmware</td><td>None in this design.</td></tr>
     </table>
@@ -172,11 +211,14 @@ GET /state
     <li>Bridge, against a pretend badge: a move that runs out ends <code>finished/time</code>; one replaced ends <code>replaced/new_move</code> and the new one has the next number; one cancelled ends <code>stopped/stop</code>; a badge that drops ends <code>lost/unreachable</code>; a stop with nothing running changes nothing.</li>
     <li>Body service, against a pretend bridge: the number comes back from <code>POST /drive</code>; <code>/state</code> has the new shape with and without treads, with the arm unreachable, and with the bridge down; every sense has the three fields; the empty slots are present and <code>null</code>; old keys still match.</li>
     <li>Brain: <code>BodySense</code> reacts to touch and nearness from <code>senses</code> exactly as before.</li>
-    <li>On the real base, with Pat: one move run to its end, one stopped, one replaced, and the badge switched off mid-move, checking each reported ending.</li>
+    <li>On the real base, with Pat: one move run to its end, one stopped, one replaced, and the badge switched off mid-move, checking each reported ending. <strong>Done</strong>: the first three on 6 October, the switch-off on 7 October (results above).</li>
+    <li>Added in the build, bridge: a badge whose link goes half-open does not hang the bridge; a badge known to be gone answers at once; a move is lost as soon as a status read finds the badge gone; a move does not start after <code>start_within_ms</code>; a refused move is numbered and ends <code>refused</code>.</li>
   </ul>
 
   <h2>Open points</h2>
   <ul>
+    <li><strong>Rocky's brain does not read the tread report.</strong> <code>BodySense</code> reads touch and distance only, so a lost move reaches the body's report and stops there. This is the next piece of work.</li>
+    <li><strong>Restarting the bridge can leave the link to the face badge stuck</strong>, so moods answer too slowly until the badge is switched off and on. The deploy script now drops the Pi's Bluetooth links to the badges before the restart; untried as of this revision.</li>
     <li><strong>A badge with its own Drive app open</strong> still ignores commands silently, so such a move would be reported <code>finished</code>. Fixing that needs a status flag from the firmware; when it exists the ending becomes <code>refused</code>.</li>
     <li><strong>The arm's poses</strong> deserve the same treatment (a number and an ending per pose). Left out here to keep this small.</li>
     <li><strong><code>/state</code> asks the bridge each time</strong>, so a hung bridge can slow the whole report by up to two seconds. Worth caching the tread part if it bites.</li>
