@@ -42,13 +42,13 @@
 <body>
 <main>
   <h1>What Rocky's body tells his brain</h1>
-  <div class="meta">Started 2026-10-06 · Revision 2 (2026-10-07) — records what the build changed and the results on the base · status: stage 1 built and tested on hardware; not yet pushed · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
+  <div class="meta">Started 2026-10-06 · Revision 3 (2026-10-07) — adds three later bridge changes (C7 to C9) and Rocky's brain reading the tread report; revision 2 (2026-10-07) recorded what the build changed and the results on the base · status: stage 1 built, tested on hardware and pushed; C7 to C9 deployed, not yet tried on the base · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
 
   <h2>In one paragraph</h2>
   <p>The body service on rocky-pi already answers in JSON, and Rocky's brain already reads it once a second. What it lacks is outcomes. A drive command answers "accepted" and nothing more, and the report mixes what was <em>asked for</em> with what was <em>measured</em>. This design gives every move a number and a stated ending, separates commanded from measured, and puts every sensor reading into one common shape, with empty slots ready for the sensors we have not wired in yet.</p>
 
-  <h2>Revision 2: what the build changed</h2>
-  <p>Stage 1 was built on 6 and 7 October and tested on the tank base. The design held, but the build added six things this page did not have. Each is now reflected in the sections below.</p>
+  <h2>What the build changed (revisions 2 and 3)</h2>
+  <p>Stage 1 was built on 6 and 7 October and tested on the tank base. The design held, but the build added nine things this page did not have. C1 to C6 came with revision 2; C7 to C9 came later the same evening, from watching Rocky run against the Pi. Each is reflected in the sections below.</p>
   <div class="card wide">
     <table>
       <tr><th></th><th>Correction</th><th>Why it was needed</th></tr>
@@ -58,6 +58,9 @@
       <tr><td>C4</td><td><strong><code>refused</code> is a real ending.</strong> The badge's status carries two flags, <code>low_memory</code> and <code>rejected</code>. A move the badge will not take is numbered, ends <code>refused</code> with that flag as the reason, and the body service answers 409.</td><td>Revision 1 drew "refused" but had no source for it.</td></tr>
       <tr><td>C5</td><td><strong><code>start_within_ms</code></strong>: the caller says how long it will wait for the move to start. If the badge is not ready by then, the move does not start and gets no number.</td><td>A move must not begin after its caller has given up waiting to hear that it did. A cold connect takes about 2.6 s; the body service waits 1 s.</td></tr>
       <tr><td>C6</td><td><strong>A move is lost the moment anything finds the badge gone</strong>, and its resend loop is cancelled then.</td><td>Found on the base on 7 October: a status poll noticed the drop at 1.9 s, but only the move's own resend could end the move, and it queued behind the reconnect attempt. The report said "unreachable" and "running" together until 13.5 s.</td></tr>
+      <tr><td>C7</td><td><strong>Letting go of a dead link runs behind the caller.</strong> The operation that timed out reports "unreachable" after its one deadline; only the next connect waits for the old link's disconnect.</td><td>Seen on the Pi: 7 s with no answers before the badge was reported gone. The read waited 3 s, then the disconnect of the dead link took up to 3 s more, with every poll queued behind it.</td></tr>
+      <tr><td>C8</td><td><strong>A status read does not start a connect.</strong> If Bluetooth has already reported the link down, <code>GET /drive</code> answers "no link to the badge" at once and the connect is left to the attempt running behind.</td><td>Seen on the Pi: 11 s with no answers. The status read had started a fresh connect, which is allowed 10 s.</td></tr>
+      <tr><td>C9</td><td><strong>A mood for a badge that is away answers at once</strong>, as a status read does (C2, C8), and starts the attempt behind it. That attempt now uses a read every badge offers, so a mood-only badge is found again.</td><td>Rocky's mood sends waited out a connect while the face badge was off and ran past his 5 s limit. Pat, 7 October: "let's do fast face failure."</td></tr>
     </table>
   </div>
 
@@ -74,7 +77,19 @@
     </table>
   </div>
   <p>Across every run: no report failed, the move history stayed readable while the badge was off, moves sent to a missing badge were refused in about 0.1 s without getting a number, each replaced move ended <code>replaced/new_move</code>, and the badge took a new move once it was back. Finished, stopped and replaced endings had already been checked on the base on 6 October.</p>
-  <p class="note">Because run B came out clean on the old code, the three clean runs do not prove C6 by themselves. The stronger proof is the bridge test that failed before the fix and passes after it. Not yet shown: Rocky's brain hearing that a move was lost. Nothing in the brain reads the tread report yet.</p>
+  <p class="note">Because run B came out clean on the old code, the three clean runs do not prove C6 by themselves. The stronger proof is the bridge test that failed before the fix and passes after it.</p>
+
+  <h3>Later the same evening</h3>
+  <div class="card wide">
+    <table>
+      <tr><th>What</th><th>Evidence</th><th>Standing</th></tr>
+      <tr><td>Rocky's brain reads the tread report (rocky-robot 2d78087)</td><td>With no script and no moves: badge on, "I feel my legs"; badge off, "I do not feel them. The signal is quiet."; badge on again, he feels them. One wrong answer first, fixed by blunter wording of the note he is given.</td><td>Shown live for legs gone and back. Not yet shown: the face moods for each event, and a move lost while Rocky is running.</td></tr>
+      <tr><td>Switching off is sometimes noticed slowly</td><td>Pi log: no answers for 7 s (20:38:45 BST) and 11 s (20:54:45 BST) before the first "unreachable". Rocky's 3 s report timeouts fell in such gaps.</td><td>C7 and C8, deployed 21:02 BST. Each has a test that failed before and passes after. Not yet tried on the base. Expected: about 3 s at worst for a half-open link, at once when the link is known down.</td></tr>
+      <tr><td>Moods hang while the face badge is away</td><td>Rocky's log: one 5 s timeout at 21:04 BST while Pat restarted the face badge; the Pi logged no answer in that window.</td><td>C9, deployed 21:11 BST, tested on the Mac. Not yet tried on the base.</td></tr>
+      <tr><td>The deploy drops the Pi's Bluetooth links before restarting the bridge</td><td>21:11 BST deploy: Pat left the face badge alone, two moods answered within a minute, and the tread badge was back after 8 s.</td><td>Worked once. The power-cycle after a deploy is a fallback now, not a step.</td></tr>
+      <tr><td>Switching on is slow (10 to 25 s, loosely timed)</td><td>The bridge retries a gone badge back to back while anyone polls, so the wait is not a retry interval. The Pi log shows the changeover itself takes one poll.</td><td>Unmeasured. Most likely the badge's own start-up before it advertises. To split it: time from the badge's menu appearing to <code>reachable</code> turning true.</td></tr>
+    </table>
+  </div>
 
   <h2>What is there today</h2>
   <div class="card wide">
@@ -181,6 +196,8 @@ GET /state
     <li><code>last_move</code> is <code>null</code> until the first move after the service starts. Move numbers count up from 1 and start again when the bridge restarts; <code>age_ms</code> tells an old move from a new one.</li>
     <li><code>recent_moves</code> and <code>last_move</code> are the bridge's own record, so they are still reported while <code>drive.reachable</code> is false.</li>
     <li>When <code>drive.reachable</code> turns false, a move that was running is already <code>lost</code> in that same report.</li>
+    <li>A status read or a mood for a badge that is away is answered at once, never after a connect (C2, C8, C9). The slowest "it has just gone" answer is one Bluetooth deadline, 3 s.</li>
+    <li>Right after the bridge restarts, a badge may read as unreachable for a few seconds until its first connect. A reader treats how it first finds a badge as no news.</li>
     <li>The first move after the badge comes back may be turned away as not ready (a connect takes about 2.6 s, the wait is 1 s). It gets no number; send it again.</li>
     <li>With no <code>[drive]</code> section, <code>drive</code> is <code>null</code>, as today.</li>
   </ul>
@@ -191,7 +208,7 @@ GET /state
       <tr><th>Project</th><th>Change</th></tr>
       <tr><td>Mood bridge</td><td>The move task records its number, what was asked, and how it ended. <code>POST /drive</code> returns the number; <code>GET /drive</code> and <code>DELETE /drive</code> include <code>last_move</code> and <code>recent_moves</code>. The number is the bridge's own counter per badge. Bluetooth deadlines, the memory of a badge that is gone, and <code>start_within_ms</code> live here too (C1, C2, C5, C6).</td></tr>
       <tr><td>Body service</td><td><code>POST /drive</code> passes the number back. <code>/state</code> builds <code>drive.commanded</code>, <code>drive.last_move</code> and the <code>senses</code> block; a refusal it makes itself (limits) is not a move and gets no number. It sends <code>start_within_ms</code> with every move and answers 409 when the badge refuses one.</td></tr>
-      <tr><td>Rocky's brain</td><td><code>body.drive()</code> returns the move number. <code>BodySense</code> reads <code>senses</code> in place of the old keys. Nothing yet acts on the treads.</td></tr>
+      <tr><td>Rocky's brain</td><td><code>body.drive()</code> returns the move number. <code>BodySense</code> reads <code>senses</code> in place of the old keys. Since 7 October (<code>rocky/body/legs.py</code>) it also reads <code>drive.reachable</code> and <code>drive.recent_moves</code> on each poll and tells Rocky, once each, of legs gone, legs back, and a move newly lost or refused. Rocky calls them his legs.</td></tr>
       <tr><td>Badge firmware</td><td>None in this design.</td></tr>
     </table>
   </div>
@@ -217,8 +234,10 @@ GET /state
 
   <h2>Open points</h2>
   <ul>
-    <li><strong>Rocky's brain does not read the tread report.</strong> <code>BodySense</code> reads touch and distance only, so a lost move reaches the body's report and stops there. This is the next piece of work.</li>
-    <li><strong>Restarting the bridge can leave the link to the face badge stuck</strong>, so moods answer too slowly until the badge is switched off and on. The deploy script now drops the Pi's Bluetooth links to the badges before the restart; untried as of this revision.</li>
+    <li><strong>C7 to C9 are untried on the base.</strong> Switch each badge off and on with Rocky running and read his log and the Pi's.</li>
+    <li><strong>Rocky has not yet been seen to hear a lost move</strong> while one is running, or to show the face mood for each legs event.</li>
+    <li><strong>The arm is still the pretend controller on the Pi</strong>, by intent: that build phase has not started. Its joints report "needs home" after every service restart and its touch and distance values are not real.</li>
+    <li><strong>Mood sequences do not have the short cut in C9.</strong> A sequence for a badge that is away still waits on a connect at each step.</li>
     <li><strong>A badge with its own Drive app open</strong> still ignores commands silently, so such a move would be reported <code>finished</code>. Fixing that needs a status flag from the firmware; when it exists the ending becomes <code>refused</code>.</li>
     <li><strong>The arm's poses</strong> deserve the same treatment (a number and an ending per pose). Left out here to keep this small.</li>
     <li><strong><code>/state</code> asks the bridge each time</strong>, so a hung bridge can slow the whole report by up to two seconds. Worth caching the tread part if it bites.</li>
