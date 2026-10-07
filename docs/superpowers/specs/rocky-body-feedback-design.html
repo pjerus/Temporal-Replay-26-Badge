@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Rocky's body tells his brain</title>
+<style>
+  :root {
+    --bg:#faf9f7; --fg:#1d1c1a; --muted:#6b675f; --card:#ffffff; --line:#dedad2;
+    --accent:#0b5cad; --ok:#1c6b3c; --warn:#8a5200; --bad:#a3261d;
+    --ble:#5b6fb5; --ir:#c98a1b; --free:#3f9a63; --over:#c4453a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#171614; --fg:#ece8e1; --muted:#9c968b; --card:#211f1c; --line:#38342f;
+      --accent:#7db7ff; --ok:#7fd39f; --warn:#f0b866; --bad:#ff8f84;
+      --ble:#8493d6; --ir:#e2a94a; --free:#6cc48d; --over:#e8695d;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.55 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width:920px; margin:0 auto; padding:28px 16px 56px; }
+  h1 { font-size:27px; margin:0 0 4px; }
+  h2 { font-size:20px; margin:38px 0 10px; }
+  h3 { font-size:16px; margin:22px 0 6px; }
+  .meta { color:var(--muted); font-size:14px; }
+  p, li { max-width:72ch; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:14px 0; }
+  .wide { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; }
+  th, td { text-align:left; padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; }
+  code, pre { font-family:ui-monospace, Menlo, Consolas, monospace; font-size:13.5px; }
+  pre { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px 14px; overflow-x:auto; }
+  svg { max-width:100%; height:auto; display:block; }
+  svg text { font-family:-apple-system, "Helvetica Neue", Arial, sans-serif; fill:var(--fg); }
+  .note { border-left:3px solid var(--warn); padding:8px 12px; background:var(--card); border-radius:0 8px 8px 0; }
+  .tag { display:inline-block; font-size:12px; font-weight:600; padding:1px 8px; border-radius:999px; border:1px solid currentColor; }
+  .measured { color:var(--ok); } .unknown { color:var(--warn); }
+</style>
+</head>
+<body>
+<main>
+  <h1>What Rocky's body tells his brain</h1>
+  <div class="meta">Started 2026-10-06 · Revision 1 (2026-10-06) — first draft for Pat's review · status: awaiting approval · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
+
+  <h2>In one paragraph</h2>
+  <p>The body service on rocky-pi already answers in JSON, and Rocky's brain already reads it once a second. What it lacks is outcomes. A drive command answers "accepted" and nothing more, and the report mixes what was <em>asked for</em> with what was <em>measured</em>. This design gives every move a number and a stated ending, separates commanded from measured, and puts every sensor reading into one common shape, with empty slots ready for the sensors we have not wired in yet.</p>
+
+  <h2>What is there today</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Request</th><th>Answer today</th><th>Gap</th></tr>
+      <tr><td>Drive, move, pose, stop</td><td><code>{"ok": true}</code></td><td>No way to follow what became of it</td></tr>
+      <tr><td><code>GET /state</code>, treads</td><td>reachable, driving, left, right, battery</td><td>These are the speeds asked for, not anything measured, and nothing says so</td></tr>
+      <tr><td><code>GET /state</code>, sensors</td><td><code>distance_cm</code>, <code>touch</code>, <code>color</code>, one shared <code>age_ms</code></td><td>Each sensor has its own shape; no place for new ones; no source</td></tr>
+      <tr><td>The brain (<code>rocky/body/sense.py</code>)</td><td>Reads <code>reachable</code>, <code>touch</code>, <code>distance_cm</code></td><td>Ignores the treads entirely</td></tr>
+    </table>
+  </div>
+  <p class="note">The path to the tread motors is one-way: infrared out, nothing back, and the LEGO motors have no sensors. So "the base moved" can only ever come from a separate sensor. This design makes that honest in the data.</p>
+
+  <h2>Decisions</h2>
+  <div class="card wide">
+    <table>
+      <tr><th></th><th>Decision</th><th>Why</th></tr>
+      <tr><td>D1</td><td>Stay with JSON over the same endpoints. <code>GET /state</code> remains the one report.</td><td>It works and the brain already polls it.</td></tr>
+      <tr><td>D2</td><td>Every drive move gets a number, and <code>POST /drive</code> returns it.</td><td>The brain can follow one move from start to end.</td></tr>
+      <tr><td>D3</td><td>Every move ends with a stated result and reason.</td><td>"Not driving" alone cannot tell finished from stopped from lost.</td></tr>
+      <tr><td>D4</td><td>The tread report holds only what was commanded. Anything measured lives under <code>senses</code>.</td><td>One place per fact; the brain never mistakes a wish for a reading.</td></tr>
+      <tr><td>D5</td><td>Every sense has the same shape: <code>value</code>, <code>source</code>, <code>age_ms</code>. A value of <code>null</code> means "not known".</td><td>Pat, 6 October: "we need to unify it with some of the sensor readings at some point. So we need to stub that in."</td></tr>
+      <tr><td>D6</td><td>Senses we expect but have not wired are listed now, with <code>null</code> values.</td><td>The shape is settled before the hardware arrives; filling one in later changes no interface.</td></tr>
+      <tr><td>D7</td><td>The old top-level <code>distance_cm</code>, <code>touch</code> and <code>color</code> stay until the brain reads <code>senses</code>, then go.</td><td>Nothing breaks on the day this ships.</td></tr>
+      <tr><td>D8</td><td>The report carries <code>"schema": 2</code>.</td><td>A reader can tell which shape it has.</td></tr>
+      <tr><td>D9</td><td>The bridge, which runs the move, is the one that records how it ended. The body service passes that on and keeps no copy of its own.</td><td>Two records of the same ending would drift apart.</td></tr>
+    </table>
+  </div>
+
+  <h2>The life of a move</h2>
+  <div class="card">
+  <svg viewBox="0 0 860 250" role="img" aria-label="States a move passes through">
+    <defs><marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+    <g font-size="13">
+      <rect x="20" y="95" width="120" height="50" rx="8" fill="var(--card)" stroke="var(--line)"/><text x="80" y="125" text-anchor="middle">asked</text>
+      <rect x="230" y="95" width="130" height="50" rx="8" fill="var(--card)" stroke="var(--accent)"/><text x="295" y="125" text-anchor="middle" font-weight="600">running</text>
+      <rect x="230" y="190" width="130" height="44" rx="8" fill="var(--card)" stroke="var(--bad)"/><text x="295" y="217" text-anchor="middle">refused</text>
+      <rect x="560" y="10" width="270" height="40" rx="8" fill="var(--card)" stroke="var(--ok)"/><text x="695" y="35" text-anchor="middle">finished · ended by: time</text>
+      <rect x="560" y="68" width="270" height="40" rx="8" fill="var(--card)" stroke="var(--line)"/><text x="695" y="93" text-anchor="middle">replaced · ended by: new move</text>
+      <rect x="560" y="126" width="270" height="40" rx="8" fill="var(--card)" stroke="var(--line)"/><text x="695" y="151" text-anchor="middle">stopped · ended by: stop</text>
+      <rect x="560" y="184" width="270" height="40" rx="8" fill="var(--card)" stroke="var(--warn)"/><text x="695" y="209" text-anchor="middle">lost · ended by: badge unreachable</text>
+    </g>
+    <g stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#b)">
+      <path d="M140 120 H228"/><path d="M110 145 C130 200 180 212 228 212"/>
+      <path d="M360 108 C450 100 480 30 558 30"/><path d="M360 116 C460 112 480 88 558 88"/>
+      <path d="M360 124 C460 128 480 146 558 146"/><path d="M360 132 C450 140 480 204 558 204"/>
+    </g>
+    <text x="184" y="112" text-anchor="middle" font-size="11" fill="var(--muted)">accepted</text>
+    <text x="130" y="205" font-size="11" fill="var(--muted)">limits, low memory</text>
+  </svg>
+  </div>
+  <p>"Finished" means the bridge sent every command and the closing stop. It does <strong>not</strong> mean the base moved. Whether it moved is a question for <code>senses.motion</code>, which is empty until a sensor fills it.</p>
+
+  <h2>The new shape</h2>
+  <pre>POST /drive  {"left": 4, "right": 4, "ms": 1500}
+→ 200 {"ok": true, "move": {"id": 17}}
+
+GET /state
+{
+  "schema": 2,
+  "reachable": true,                       // the arm's controller, as today
+  "controller": "nxt",
+  "joints": { "pan": {"deg": 12.0, "state": "moving"} },
+
+  "drive": {
+    "kind": "badge", "target": "tread", "reachable": true,
+    "commanded": { "left": 4.0, "right": 4.0, "ms_left": 800 },
+    "last_move": {
+      "id": 17,
+      "asked":  { "left": 4.0, "right": 4.0, "ms": 1500 },
+      "result": "running",                 // running | finished | replaced | stopped | lost | refused
+      "ended_by": null,                    // time | new_move | stop | unreachable | &lt;refusal reason&gt;
+      "age_ms": 700                        // since it started, or since it ended
+    }
+  },
+
+  "senses": {
+    "distance_cm": { "value": 42,            "source": "nxt.ultrasonic", "age_ms": 180 },
+    "touch":       { "value": [false, true], "source": "nxt.touch",      "age_ms": 180 },
+    "color":       { "value": "red",         "source": "nxt.color",      "age_ms": 180 },
+    "tread_battery_pct": { "value": 100,     "source": "badge.tread",    "age_ms": 250 },
+
+    "motion":      { "value": null, "source": null, "age_ms": null },   // still | moving | turning
+    "heading_deg": { "value": null, "source": null, "age_ms": null },
+    "tilt_deg":    { "value": null, "source": null, "age_ms": null },
+    "bumped":      { "value": null, "source": null, "age_ms": null }
+  },
+
+  "distance_cm": 42, "touch": [false, true], "color": "red", "age_ms": 180   // old keys, kept for now (D7)
+}</pre>
+
+  <h3>Rules a reader can rely on</h3>
+  <ul>
+    <li>A sense is always an object with <code>value</code>, <code>source</code> and <code>age_ms</code>. <code>value: null</code> means not known; never guess from it.</li>
+    <li>New senses may appear at any time. A reader ignores names it does not know.</li>
+    <li><code>drive.commanded</code> is zero whenever no move is running.</li>
+    <li><code>last_move</code> is <code>null</code> until the first move after the service starts. Move numbers count up from 1 and start again when the bridge restarts; <code>age_ms</code> tells an old move from a new one.</li>
+    <li>With no <code>[drive]</code> section, <code>drive</code> is <code>null</code>, as today.</li>
+  </ul>
+
+  <h2>Where each piece lives</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Project</th><th>Change</th></tr>
+      <tr><td>Mood bridge</td><td>The move task records its number, what was asked, and how it ended. <code>POST /drive</code> returns the number; <code>GET /drive</code> and <code>DELETE /drive</code> include <code>last_move</code>. The number is the bridge's own counter per badge.</td></tr>
+      <tr><td>Body service</td><td><code>POST /drive</code> passes the number back. <code>/state</code> builds <code>drive.commanded</code>, <code>drive.last_move</code> and the <code>senses</code> block; a refusal it makes itself (limits) is not a move and gets no number.</td></tr>
+      <tr><td>Rocky's brain</td><td><code>body.drive()</code> returns the move number. <code>BodySense</code> reads <code>senses</code> in place of the old keys. Nothing yet acts on the treads.</td></tr>
+      <tr><td>Badge firmware</td><td>None in this design.</td></tr>
+    </table>
+  </div>
+
+  <h2>Stages</h2>
+  <div class="card wide">
+    <table>
+      <tr><th>Stage</th><th>What</th><th>Needs</th></tr>
+      <tr><td>1</td><td>Move numbers and endings, in the bridge and the body service.</td><td>Tests on the Mac; then two scripts for Pat to run on the Pi</td></tr>
+      <tr><td>2</td><td>The <code>senses</code> block with today's sensors and the empty slots; the brain switches to it; old keys removed.</td><td>Tests on the Mac; Pi script</td></tr>
+      <tr><td>Later</td><td>Fill <code>motion</code> and <code>tilt_deg</code> from the badge's motion sensor (firmware, bridge). Fill <code>bumped</code> from an NXT touch sensor used as a bumper. Each is its own small design.</td><td>Hardware</td></tr>
+    </table>
+  </div>
+
+  <h2>Testing</h2>
+  <ul>
+    <li>Bridge, against a pretend badge: a move that runs out ends <code>finished/time</code>; one replaced ends <code>replaced/new_move</code> and the new one has the next number; one cancelled ends <code>stopped/stop</code>; a badge that drops ends <code>lost/unreachable</code>; a stop with nothing running changes nothing.</li>
+    <li>Body service, against a pretend bridge: the number comes back from <code>POST /drive</code>; <code>/state</code> has the new shape with and without treads, with the arm unreachable, and with the bridge down; every sense has the three fields; the empty slots are present and <code>null</code>; old keys still match.</li>
+    <li>Brain: <code>BodySense</code> reacts to touch and nearness from <code>senses</code> exactly as before.</li>
+    <li>On the real base, with Pat: one move run to its end, one stopped, one replaced, and the badge switched off mid-move, checking each reported ending.</li>
+  </ul>
+
+  <h2>Open points</h2>
+  <ul>
+    <li><strong>A badge with its own Drive app open</strong> still ignores commands silently, so such a move would be reported <code>finished</code>. Fixing that needs a status flag from the firmware; when it exists the ending becomes <code>refused</code>.</li>
+    <li><strong>The arm's poses</strong> deserve the same treatment (a number and an ending per pose). Left out here to keep this small.</li>
+    <li><strong><code>/state</code> asks the bridge each time</strong>, so a hung bridge can slow the whole report by up to two seconds. Worth caching the tread part if it bites.</li>
+    <li><strong>Battery reads 0</strong> on the face badge. It will show as <code>0</code>, not <code>null</code>, until the firmware reports it properly.</li>
+  </ul>
+</main>
+</body>
+</html>
