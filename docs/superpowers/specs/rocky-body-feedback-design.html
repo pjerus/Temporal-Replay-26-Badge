@@ -42,7 +42,7 @@
 <body>
 <main>
   <h1>What Rocky's body tells his brain</h1>
-  <div class="meta">Started 2026-10-06 · Revision 3 (2026-10-07) — adds three later bridge changes (C7 to C9) and Rocky's brain reading the tread report; revision 2 (2026-10-07) recorded what the build changed and the results on the base · status: stage 1 built, tested on hardware and pushed; C7 to C9 deployed, not yet tried on the base · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
+  <div class="meta">Started 2026-10-06 · Revision 4 (2026-10-07) — adds the first results for C7 to C9 on the base with Rocky running (interim: the switch-on delay is not yet measured); revision 3 (2026-10-07) added three later bridge changes (C7 to C9) and Rocky's brain reading the tread report; revision 2 (2026-10-07) recorded what the build changed and the results on the base · status: stage 1 built, tested on hardware and pushed; C7 to C9 deployed and passed on the base, with one face mood missed · follows on from <a href="rocky-pi-tread-drive-design.html">Driving the treads from rocky-pi</a></div>
 
   <h2>In one paragraph</h2>
   <p>The body service on rocky-pi already answers in JSON, and Rocky's brain already reads it once a second. What it lacks is outcomes. A drive command answers "accepted" and nothing more, and the report mixes what was <em>asked for</em> with what was <em>measured</em>. This design gives every move a number and a stated ending, separates commanded from measured, and puts every sensor reading into one common shape, with empty slots ready for the sensors we have not wired in yet.</p>
@@ -84,12 +84,40 @@
     <table>
       <tr><th>What</th><th>Evidence</th><th>Standing</th></tr>
       <tr><td>Rocky's brain reads the tread report (rocky-robot 2d78087)</td><td>With no script and no moves: badge on, "I feel my legs"; badge off, "I do not feel them. The signal is quiet."; badge on again, he feels them. One wrong answer first, fixed by blunter wording of the note he is given.</td><td>Shown live for legs gone and back. Not yet shown: the face moods for each event, and a move lost while Rocky is running.</td></tr>
-      <tr><td>Switching off is sometimes noticed slowly</td><td>Pi log: no answers for 7 s (20:38:45 BST) and 11 s (20:54:45 BST) before the first "unreachable". Rocky's 3 s report timeouts fell in such gaps.</td><td>C7 and C8, deployed 21:02 BST. Each has a test that failed before and passes after. Not yet tried on the base. Expected: about 3 s at worst for a half-open link, at once when the link is known down.</td></tr>
-      <tr><td>Moods hang while the face badge is away</td><td>Rocky's log: one 5 s timeout at 21:04 BST while Pat restarted the face badge; the Pi logged no answer in that window.</td><td>C9, deployed 21:11 BST, tested on the Mac. Not yet tried on the base.</td></tr>
+      <tr><td>Switching off is sometimes noticed slowly</td><td>Pi log: no answers for 7 s (20:38:45 BST) and 11 s (20:54:45 BST) before the first "unreachable". Rocky's 3 s report timeouts fell in such gaps.</td><td>C7 and C8, deployed 21:02 BST. Each has a test that failed before and passes after. Tried on the base later that night (results below). Expected: about 3 s at worst for a half-open link, at once when the link is known down.</td></tr>
+      <tr><td>Moods hang while the face badge is away</td><td>Rocky's log: one 5 s timeout at 21:04 BST while Pat restarted the face badge; the Pi logged no answer in that window.</td><td>C9, deployed 21:11 BST, tested on the Mac. Tried on the base later that night (results below).</td></tr>
       <tr><td>The deploy drops the Pi's Bluetooth links before restarting the bridge</td><td>21:11 BST deploy: Pat left the face badge alone, two moods answered within a minute, and the tread badge was back after 8 s.</td><td>Worked once. The power-cycle after a deploy is a fallback now, not a step.</td></tr>
       <tr><td>Switching on is slow (10 to 25 s, loosely timed)</td><td>The bridge retries a gone badge back to back while anyone polls, so the wait is not a retry interval. The Pi log shows the changeover itself takes one poll.</td><td>Unmeasured. Most likely the badge's own start-up before it advertises. To split it: time from the badge's menu appearing to <code>reachable</code> turning true.</td></tr>
     </table>
   </div>
+
+  <h3>C7 to C9 on the base, with Rocky running (revision 4, interim)</h3>
+  <p>Run by the rocky-robot session from about 22:25 to 22:47 BST on 7 October, with Pat at the badges' switches. Rocky's brain ran on the Mac from tread-drive c1e30e9, which includes 85db420 and 2d78087. The Pi was said to be on bridge adf98f3; that was not checked again here. A script on the Mac polled the body report every 0.25 s and the face badge's state every 0.5 s, and listened on Rocky's face websocket to see when his brain reacted. Times are BST, converted from the Mac's clock.</p>
+
+  <p><strong>Face badge switched off and on (C9): pass.</strong> No mood waited on a connect; Rocky's limit is 5 s.</p>
+  <div class="card wide">
+    <table>
+      <tr><th>Step</th><th>When</th><th>What the mood request did</th></tr>
+      <tr><td>Face on, before</td><td></td><td>Answered in 0.23 to 0.46 s.</td></tr>
+      <tr><td>Switched off</td><td>Last good mood 22:40:48.8; first failure 22:40:50.87</td><td>Failed in 0.07 s: 502, "no link to the badge".</td></tr>
+      <tr><td>While off</td><td>13 failures</td><td>Each failed in 0.05 to 0.14 s. The first 5 said "no link to the badge"; from 22:41:01.4 the other 8 said "no connection to the badge within 10 s".</td></tr>
+      <tr><td>Switched on</td><td>First good mood 22:41:18.4</td><td>Answered in 0.35 s, then as before. That is 27.5 s after the first failure, which includes however long the badge was left off.</td></tr>
+    </table>
+  </div>
+
+  <p><strong>Tread badge switched off mid-move (C6 to C8): pass, three times in one 5-minute run.</strong> Moves of 5 s at speed 1, forward then back, were sent about every 4.5 s.</p>
+  <div class="card wide">
+    <table>
+      <tr><th>Switch-off</th><th>Report first showed the badge gone</th><th>Move marked lost</th><th>Rocky's brain reacted</th><th>Face badge</th><th>Switched back on</th></tr>
+      <tr><td>1</td><td>22:42:37.65</td><td>Move 12, same report</td><td>22:42:37.65</td><td>Scared 0.8 at 22:42:38.7, back to his resting mood after 6 s</td><td>Reachable 22:42:53.93, 16.3 s after gone. Happy at 22:42:55.3. Move 13 accepted first try, 22:42:55.9.</td></tr>
+      <tr><td>2</td><td>22:43:07.49</td><td>Move 15, same report</td><td>22:43:07.50</td><td>Scared at 22:43:08.6</td><td>Reachable 22:43:29.58, 22.1 s after gone. Happy at 22:43:30.3. Move 16 accepted first try, 22:43:31.3.</td></tr>
+      <tr><td>3</td><td>22:44:02.81</td><td>Move 22, same report</td><td>22:44:02.77</td><td><strong>Not shown.</strong> The mood send failed with a Bluetooth error on the face badge.</td><td>Left off until the run ended at 22:46:42.</td></tr>
+    </table>
+  </div>
+  <p>Across the run: no report failed and the slowest took 1.17 s. Every lost move was already marked lost in the report that first showed the badge gone. 47 moves sent while the badge was off were turned away (503, treads unreachable) and none got a number; they took 0.08 to 0.34 s, except the first after switch-off 1, which took 2.05 s. The exact switch-off instants were not recorded, so "noticed within" is bounded only by the gap between the last good report and the first gone one, about 1.3 s at worst. No 7 s or 11 s silence appeared.</p>
+  <p class="note">The miss at switch-off 3: Rocky logged "badge face unavailable" with a Bluetooth "unlikely error" from the face badge, and the script's own read of the face failed at 22:44:01.5, 1.3 s before the legs were reported gone. The face read normally again by 22:44:05.6. One similar single failed read came at 22:42:09.6 with nothing being switched. So a face badge error can land at the same moment as the tread badge dropping, and the legs-gone mood is then lost.</p>
+  <p class="note">The scared and happy moods above were read from the face badge's state, not confirmed by eye. Pat's one remark was that Rocky "looks upset", which was his resting mood that day (angry 0.8, set before the tests). After the face badge came back on it reported battery 0; it had reported 100 before.</p>
+  <p><strong>Switch-on delay: not measured yet.</strong> Pat could not see a clock during the run. A phone-stopwatch time from the badge's menu appearing to the treads moving has been asked for. The 16.3 s and 22.1 s above include the time the badge was left off, so they do not answer it.</p>
 
   <h2>What is there today</h2>
   <div class="card wide">
@@ -234,14 +262,16 @@ GET /state
 
   <h2>Open points</h2>
   <ul>
-    <li><strong>C7 to C9 are untried on the base.</strong> Switch each badge off and on with Rocky running and read his log and the Pi's.</li>
-    <li><strong>Rocky has not yet been seen to hear a lost move</strong> while one is running, or to show the face mood for each legs event.</li>
+    <li><strong>A legs mood is lost if the face badge has a Bluetooth error at that moment.</strong> Seen once in three switch-offs on 7 October. Whether the send should be retried is undecided.</li>
+    <li><strong>The face moods for legs gone and back have not been confirmed by eye.</strong> They were read from the face badge's state. Rocky's brain reacted to each lost move in the same report that showed it.</li>
+    <li><strong>The switch-on delay is still unmeasured.</strong> Waiting on a stopwatch time from the badge's menu appearing to the treads moving.</li>
+    <li><strong>One move for a missing badge took 2.05 s to be turned away</strong>, the first after a switch-off; the other 46 took 0.34 s or less. Not explained.</li>
     <li><strong>The arm is still the pretend controller on the Pi</strong>, by intent: that build phase has not started. Its joints report "needs home" after every service restart and its touch and distance values are not real.</li>
     <li><strong>Mood sequences do not have the short cut in C9.</strong> A sequence for a badge that is away still waits on a connect at each step.</li>
     <li><strong>A badge with its own Drive app open</strong> still ignores commands silently, so such a move would be reported <code>finished</code>. Fixing that needs a status flag from the firmware; when it exists the ending becomes <code>refused</code>.</li>
     <li><strong>The arm's poses</strong> deserve the same treatment (a number and an ending per pose). Left out here to keep this small.</li>
     <li><strong><code>/state</code> asks the bridge each time</strong>, so a hung bridge can slow the whole report by up to two seconds. Worth caching the tread part if it bites.</li>
-    <li><strong>Battery reads 0</strong> on the face badge. It will show as <code>0</code>, not <code>null</code>, until the firmware reports it properly.</li>
+    <li><strong>Battery reads 0</strong> on the face badge. On 7 October it read 100 until the badge was switched off and on, then 0. It will show as <code>0</code>, not <code>null</code>, until the firmware reports it properly.</li>
   </ul>
 </main>
 </body>
